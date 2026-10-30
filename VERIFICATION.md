@@ -1,7 +1,7 @@
-# Verification · Leak Lock 0.3.7 · 2026-10-29
+# Verification · Leak Lock 0.3.9 · 2026-10-29
 
 - Strict TypeScript: passed.
-- Unit / DOM tests: 50 passed across five suites.
+- Unit / DOM tests: 58 passed across seven suites.
 - MV3 production build: passed.
 - Real unpacked extension in isolated Chromium: passed.
 - Browser MCP: inspected the supplied Figma reference; verified the sample HTML demo end to end: unmatched post → Hide → Add to filter → edit phrase → save → new similar post automatically hidden under the selected filter. Adjacent safe post remains visible.
@@ -28,3 +28,13 @@ Instagram stability: reproduced manual Hide moving the user’s live feed. Repla
 Reddit and contextual controls (0.3.6): automatic matches have Reveal and secondary Always allow, with no Add to filter. Manual hides offer Undo hide and Add to filter, with no allowance menu. Live inspection found parent comment shells include their replies; extraction/treatment now targets each modern comment body or old Reddit entry. Five new unit regressions and Chromium checks cover independent replies, metadata, manual comment hide/undo, retained forms across timestamp updates, and conservative skipping of unbounded parent comments. Chromium screenshots: evidence/reddit-controls.png and evidence/reddit-replies.png. Live 0.3.6 confirmation is pending reload.
 
 Community context and cleaner overlays (0.3.7): Reddit metadata/canonical permalinks supply each item’s subreddit. Four new unit tests cover r/dune spoiler context, comments, arbitrary community names and sidebar isolation. Chromium covers a title without Dune text in r/dune matching, a safe trailer remaining visible and an unrelated community remaining visible. Overlays omit the matched-word line. Automatically filtered overlays omit Add to filter. These checks use the actual unpacked extension in an isolated profile; live 0.3.7 verification is pending extension reload.
+
+### Desktop Reels 0.3.8
+
+Inspected the authenticated Instagram desktop Reels HTML using the computer tool. The previous seven-level ancestor search found zero units among 11 video elements. The new bounded search found 11 distinct single-video units. A shared regression HTML fixture models deeply nested div players, creator /username/reels/ links, caption role=button elements, sibling social controls, audio links, and multiple preloaded reels without article elements.
+
+Validation: TypeScript passes; 55 unit tests pass; the Chromium extension suite passes, including automatic Golf filtering, correct creator controls, manual reel Hide/Undo/Add to filter, unchanged reel height and scroll position, and recycled media. Rebuilt the canonical unpacked output in place. Reloaded the existing Chrome installation and confirmed version 0.3.8. Refreshed the real Instagram Reels tab and verified the new Hide control, single-reel treatment, and Undo. Live Hide preserved height 428.991455px, top 16.164772px and scroll offset 31.818182px. The test hide was undone; user filters were preserved. Live automatic matching was not tested against a Dune spoiler; that matching behavior was validated in the browser fixtures.
+
+### Optional demo controls 0.3.9
+
+Manual controls default off for new and existing settings. Three new unit regressions cover preference validation/backward compatibility, automatic filtering without demo controls, and toggling off to restore manual hides while preserving automatic matches. Strict TypeScript, all 58 unit tests and the full Chromium suite pass. Browser checks verify saved toggle persistence, 28px icon size, zero opacity off-hover, hover visibility, keyboard focus, manual hide, toggle-off cleanup and unchanged automatic filtering. Browser MCP independently checked Settings → Demo controls in the HTTP sample UI, confirmed persistence after reload, and returned the sample preference to off. Reduced motion disables the short fade; touch devices retain a visible low-opacity button. The live installed extension needs reload to pick up 0.3.9.

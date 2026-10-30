@@ -41,6 +41,18 @@ function extract(root: HTMLElement, url: URL, candidates: Set<HTMLElement>, type
   if(outbound) {try {const target=new URL(outbound,url);if(/^https?:$/.test(target.protocol))domain=target.hostname;} catch { /* leave site domain */ }}
   return {root,id:metadata.getAttribute('post-id') || metadata.getAttribute('thingid') || metadata.id || permalink,site:url.hostname,url:permalink,type,author,title,body,caption:type==='reel'?body:'',hashtags:body.match(/#[\p{L}\p{N}_]+/gu) ?? [],labels,domain,evidence:[...(body ? ['visible DOM text']:[]),...(labels.length?['accessible metadata']:[])],limitations:type==='reel'?['Text and accessible metadata only; video, audio and embedded text are not analyzed.']:['Heuristic extraction; site structure may limit coverage.']};
 }
+function instagramPath(link: HTMLAnchorElement): string {
+  try {const url=new URL(link.getAttribute('href') || '','https://www.instagram.com');return /(^|\.)instagram\.com$/.test(url.hostname)?url.pathname:'';} catch {return '';}
+}
+function instagramProfile(root: HTMLElement): HTMLAnchorElement | undefined {
+  return Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href]')).find(a=>{
+    const path=instagramPath(a);
+    return /^\/[\w.]+(?:\/reels)?\/?$/.test(path) && !/^\/(reels|reel|p|explore|direct|accounts|stories|about|legal)\/?$/.test(path);
+  });
+}
+function instagramPermalink(root: HTMLElement): HTMLAnchorElement | undefined {
+  return Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href]')).find(a=>/^\/(?:p|reel|reels)\/(?!audio(?:\/|$))[\w-]+\/?$/.test(instagramPath(a)));
+}
 export const instagram: Adapter = {
   id:'instagram-reels',matches:url=>/(^|\.)instagram\.com$/.test(url.hostname),
   discover(doc) {
@@ -48,14 +60,20 @@ export const instagram: Adapter = {
     for(const video of doc.querySelectorAll('video')) {
       const article=video.closest('article');
       if(article && article.querySelectorAll('video').length===1){roots.add(article);continue;}
-      let el=video.parentElement;
-      for(let depth=0;el && depth<7;depth++,el=el.parentElement) {
-        if(el.matches('main,body,[role="dialog"],nav')) break;
+      let el=video.parentElement,fallback:HTMLElement|undefined;
+      // Desktop Reels have many player wrappers and no article. Walk to the
+      // caption/action shell, stopping before a feed or another video's shell.
+      for(let depth=0;el && depth<40;depth++,el=el.parentElement) {
+        if(el.matches('main,body,[role="main"],[role="dialog"],nav')) break;
         if(el.querySelectorAll('video').length!==1) break;
-        if(el.querySelector('a[href*="/reel/"],a[href*="/reels/"]') || el.matches('article')) {roots.add(el);break;}
+        const hasIdentity=!!instagramProfile(el) || !!instagramPermalink(el);
+        if(hasIdentity && !fallback)fallback=el;
+        if(el.querySelector('[aria-label="Like"],[aria-label="Unlike"],[aria-label="Comment"]')) {fallback=el;break;}
       }
+      if(fallback)roots.add(fallback);
     }
-    return [...roots];
+    // An article and its video shell must never become overlapping units.
+    return [...roots].filter(root=>![...roots].some(other=>other!==root && other.contains(root)));
   },
   extract(root,url,candidates) {
     const item=extract(root,url,candidates,root.querySelector('video')?'reel':'post');
@@ -68,8 +86,14 @@ export const instagram: Adapter = {
     }).sort((a,b)=>b.score-a.score);
     item.active=ranked[0]?.candidate===root;
 
-    const profile=Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href]')).find(a=>/^\/[\w.]+\/?$/.test(a.getAttribute('href') || '') && !/^\/(reels|explore|direct|accounts)\/?$/.test(a.getAttribute('href') || ''));
-    item.author=profile?.getAttribute('href')?.split('/').filter(Boolean)[0] || item.author;
+    const profile=instagramProfile(root),permalink=instagramPermalink(root);
+    item.author=profile?instagramPath(profile).split('/').filter(Boolean)[0]:item.author;
+    // Creator /username/reels/ links and audio links are not reel permalinks.
+    // Media identity distinguishes preloaded/recycled reels without borrowing
+    // the current page's URL for every video on screen.
+    const video=root.querySelector('video'),media=video?.getAttribute('src') || video?.querySelector('source')?.getAttribute('src') || video?.getAttribute('poster');
+    item.url=permalink?new URL(instagramPath(permalink),url).href:new URL('/reels/',url).href;
+    item.id=permalink?item.url:`instagram:${item.author || ''}:${media || root.id || item.body}`;
     // Author and player chrome alone do not constitute useful reel text.
     if(item.author) item.body=item.body.replace(item.author,'').trim();
     item.caption=item.body;

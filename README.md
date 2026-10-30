@@ -35,7 +35,7 @@ This is a hard-coded starter requested for testing, not universal semantic AI. T
 
 A disabled, editable **Dune movie spoilers** starter catches a Dune reference together with spoiler cues such as “ending”, “plot leak” or “final scene”. Spoiler-free/no-spoilers reviews are exempt. It covers title variants for Parts Two/Three; it does not infer unmarked plot disclosures or analyze video/audio. The single Filter content field includes matching text and its `Only with:` context requirement. This is best-effort text matching, not semantic detection. General Dune trailers and unrelated movie endings remain visible unless another filter matches.
 
-For a quick demo, **Hide** immediately blurs a supported post without saving or learning anything; **Undo hide** restores it. The overlay labels it “Hidden by you” to distinguish manual actions from actual rule matches.
+For a quick demo, enable **Settings → Demo controls**, then use the small eye-off icon on hover or keyboard focus. **Hide** immediately blurs a supported post without saving or learning anything; **Undo hide** restores it. The overlay labels it “Hidden by you” to distinguish manual actions from actual rule matches.
 
 ## The simple flow
 
@@ -99,7 +99,7 @@ Dropdown panels use a short 220 ms size transition with a subtle fade, including
 
 ### Instagram stability fix (0.3.5)
 
-Hide controls now sit outside normal layout flow; unchanged controls stay in the DOM during rescans. Hidden posts treat newly inserted children without rebuilding the overlay. Stable post links preserve manual hides across timestamp/caption updates, while a new permalink resets recycled content. Extraction separates adjacent text nodes and recognizes Instagram /p/ and /reels/ links, excluding audio-track titles from post evidence. Hovering Hide shows whether active rules found text evidence or an allowance applies.
+Hide controls now sit outside normal layout flow; unchanged controls stay in the DOM during rescans. Hidden posts treat newly inserted children without rebuilding the overlay. Stable post links preserve manual hides across timestamp/caption updates, while a new permalink resets recycled content. Extraction separates adjacent text nodes and recognizes Instagram /p/ and /reels/ links, excluding audio-track titles from post evidence. Demo Hide is available through Settings → Demo controls.
 
 ### Reddit and simpler controls (0.3.6)
 
@@ -108,3 +108,11 @@ Automatically filtered posts show the matched rule, Reveal, and secondary Always
 ### Community context and cleaner overlays (0.3.7)
 
 Each Reddit post/comment carries its own community context from metadata or its canonical permalink. Any filter can use that context; separator/camel-case community names are normalized without topic lists. For example, r/dune supplies the Dune context for a spoiler cue, while an ordinary trailer stays visible under the default spoiler rule. Sidebars and other posts never supply community context. The overlay shows only the filter name and actions; matched-word quotes have been removed. This UI change does not add semantic AI.
+
+### Desktop Reels discovery fix (0.3.8)
+
+Reels without article elements are discovered through deeply nested player wrappers, stopping at the single-video caption/action shell before the feed or dialog. Creator /username/reels/ links supply author identity; profile and audio links are never treated as reel permalinks. When no permalink exists, media identity distinguishes preloaded and recycled reels. Automatic filters, manual Hide, Undo hide and Add to filter all work on these reel units. Tests model the inspected desktop HTML and verify scope, stable scroll position, creator controls and recycled media. Captions and hashtags remain text-only evidence; video, embedded text and audio are not analyzed.
+
+### Optional demo controls (0.3.9)
+
+Manual Hide is off by default, including existing settings without this preference. Enable Settings → Demo controls to show a small eye-off button when hovering or focusing a supported post, reel or comment. Touch devices show it at reduced opacity. Turning this off removes demo controls and restores manual hides; automatic filters remain active. This preference is saved locally and included in settings export/import. The standalone demo page opts in only for its own sample feed.

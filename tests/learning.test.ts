@@ -64,7 +64,7 @@ describe('manual hide and example workflow',()=>{
   const click=(text:string)=>[...shadow().querySelectorAll('button')].find(b=>b.textContent===text)!.click();
   it('hides an unmatched item immediately, teaches a filter, and automatically matches a future sibling',async()=>{
     document.body.innerHTML='<article id="original"><h2>Rainbow noodles special</h2><p>A new offer</p></article>';
-    let p=structuredClone(DEFAULTS);
+    let p:Preferences={...structuredClone(DEFAULTS),demoControls:true};
     const learn=vi.fn(async(id:string,phrase:string)=>{p=learnRule(p,id,phrase);engine!.update(p);});
     engine=new FilterEngine(p,async()=>{},document,learn);
     document.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();
@@ -78,7 +78,7 @@ describe('manual hide and example workflow',()=>{
     expect(document.querySelector('#future quiet-web-controls')!.shadowRoot!.textContent).toContain('Gambling promotions');
   });
   it('undoes manual hide and resets manual state when a site recycles a card',()=>{
-    document.body.innerHTML='<article><p>Unrecognized content</p></article>';engine=new FilterEngine(structuredClone(DEFAULTS),async()=>{});
+    document.body.innerHTML='<article><p>Unrecognized content</p></article>';engine=new FilterEngine(({...structuredClone(DEFAULTS),demoControls:true}),async()=>{});
     document.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();click('Undo hide');expect(document.querySelector('quiet-web-controls')).toBeNull();
     document.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();document.querySelector('p')!.textContent='New peaceful post';engine.scan();expect(document.querySelector('quiet-web-controls')).toBeNull();
     engine.destroy();expect(document.querySelector('quiet-web-manual')).toBeNull();
@@ -86,10 +86,10 @@ describe('manual hide and example workflow',()=>{
   it('keeps manual hide available for image-only Instagram articles and never hides the feed shell',()=>{
     document.body.innerHTML='<main><article><img alt="A nice mountain"></article><article><img alt="A sunset"></article></main>';
     const roots=instagram.discover(document);expect(roots).toHaveLength(2);expect(instagram.extract(roots[0],new URL('https://www.instagram.com/'),new Set(roots)).type).toBe('post');
-    engine=new FilterEngine(structuredClone(DEFAULTS),async()=>{});expect(document.querySelectorAll('article > quiet-web-manual')).toHaveLength(2);expect(document.querySelector('main > quiet-web-manual')).toBeNull();
+    engine=new FilterEngine(({...structuredClone(DEFAULTS),demoControls:true}),async()=>{});expect(document.querySelectorAll('article > quiet-web-manual')).toHaveLength(2);expect(document.querySelector('main > quiet-web-manual')).toBeNull();
   });
   it('preserves rule exceptions after learning and shows save failures without revealing the manual hide',async()=>{
-    const p=structuredClone(DEFAULTS);p.rules[0].except=['film review'];const taught=learnRule(p,p.rules[0].id,'rainbow noodles');
+    const p=({...structuredClone(DEFAULTS),demoControls:true});p.rules[0].except=['film review'];const taught=learnRule(p,p.rules[0].id,'rainbow noodles');
     document.body.innerHTML='<article>Film review: rainbow noodles</article>';engine=new FilterEngine(taught,async()=>{},document,async()=>{throw new Error('Storage unavailable');});
     expect(document.querySelector('quiet-web-controls')).toBeNull();document.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();click('Add to filter');
     shadow().querySelector('form')!.dispatchEvent(new Event('submit',{cancelable:true}));await Promise.resolve();await Promise.resolve();expect(shadow().textContent).toContain('Storage unavailable');expect(engine.status.hidden).toBe(1);click('Undo hide');expect(document.querySelector('quiet-web-controls')).toBeNull();

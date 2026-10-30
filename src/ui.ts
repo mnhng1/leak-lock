@@ -19,6 +19,7 @@ function render(){
     return;
   }
   $<HTMLInputElement>('enabled').checked=prefs.enabled;
+  $<HTMLInputElement>('demo-controls').checked=!!prefs.demoControls;
   $('enabled-label').textContent=prefs.enabled?'On':'Off';
   $<HTMLSelectElement>('default-action').value=prefs.defaultAction;
   const list=$('rules');
@@ -66,6 +67,7 @@ async function initPopup(){
   window.addEventListener('pagehide',()=>clearInterval(refreshTimer),{once:true});
 }
 function initOptions(){
+  $('demo-controls').onchange=()=>run(async()=>{prefs.demoControls=$<HTMLInputElement>('demo-controls').checked;await save();});
   $('enabled').onchange=()=>run(async()=>{prefs.enabled=$<HTMLInputElement>('enabled').checked;await save();});
   $('default-action').onchange=()=>run(async()=>{prefs.defaultAction=$<HTMLSelectElement>('default-action').value as 'blur'|'collapse';await save();});
   $('add-rule').onsubmit=event=>{event.preventDefault();run(async()=>{

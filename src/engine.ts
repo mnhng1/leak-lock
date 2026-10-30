@@ -27,7 +27,7 @@ export class FilterEngine {
   private observe(){this.observer.observe(this.doc.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['href','src','aria-label','alt','post-id','thingid','permalink','author','data-author','data-permalink','data-post-id','data-comment-id','subreddit-name','subreddit-prefixed-name','data-subreddit']});}
   private schedule(){if(!this.timer)this.timer=setTimeout(()=>{this.timer=undefined;this.scan();},180);}
   private clearView(state:RecordState,focus=false){state.manual?.restore();state.manual=undefined;state.treatment?.restore(focus);state.treatment=undefined;}
-  update(prefs:Preferences){this.prefs=prefs;this.revision++;for(const state of this.records.values())state.revealedUntil=undefined;this.scan();}
+  update(prefs:Preferences){this.prefs=prefs;this.revision++;for(const state of this.records.values()){state.revealedUntil=undefined;if(!prefs.demoControls)state.manualHidden=false;}this.scan();}
   scan() {
     this.observer.disconnect();
     try {
@@ -70,9 +70,7 @@ export class FilterEngine {
         state.signature=signature;
         const current=state;
         if(!hidden){
-          const active=this.prefs.rules.filter(r=>r.enabled).map(r=>r.name).join(', ');
-          const reason=decision.status==='allowed'?'Allowed author or domain.':decision.status==='insufficient'?'Not enough text evidence.':'No text rule matched.';
-          state.manual=addManualControl(item,()=>{current.manualHidden=true;current.revealedUntil=undefined;this.scan();current.treatment?.host.shadowRoot?.querySelector('button')?.focus({preventScroll:true});},`${reason} ${active?`Active filters: ${active}`:'No filters are on.'}`);
+          if(this.prefs.demoControls)state.manual=addManualControl(item,()=>{current.manualHidden=true;current.revealedUntil=undefined;this.scan();current.treatment?.host.shadowRoot?.querySelector('button')?.focus({preventScroll:true});});
           continue;
         }
         state.treatment=applyTreatment(item,decision,()=>{

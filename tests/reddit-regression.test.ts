@@ -7,7 +7,7 @@ import { DEFAULTS, presetRule } from '../src/model';
 import { evaluate } from '../src/classifier';
 let engine:FilterEngine|undefined;
 afterEach(()=>{engine?.destroy();document.body.innerHTML='';});
-const prefs=()=>({...structuredClone(DEFAULTS),rules:[presetRule('gambling')]});
+const prefs=()=>({...structuredClone(DEFAULTS),demoControls:true,rules:[presetRule('gambling')]});
 const fixture=()=>{document.body.innerHTML=`<main>
   <shreddit-post id="post" permalink="/r/test/comments/post/" author="alice" post-title="A quiet day"><h2>A quiet day</h2></shreddit-post>
   <shreddit-comment thingid="parent" permalink="/r/test/comments/post/comment/parent/" author="bob"><details open>

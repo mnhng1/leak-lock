@@ -29,7 +29,7 @@ export function learningForm(item:ContentUnit,rules:Rule[],learn:Learn,done:()=>
   return form;
 }
 export interface ManualControl {host:HTMLElement;restore():void}
-export function addManualControl(item:ContentUnit,hide:()=>void,description="Hide this post without changing your filters"):ManualControl {
+export function addManualControl(item:ContentUnit,hide:()=>void):ManualControl {
   const root=item.root,doc=root.ownerDocument;
   const priorPosition=root.style.getPropertyValue('position'),priority=root.style.getPropertyPriority('position'),hadStyle=root.hasAttribute('style');
   const changed=getComputedStyle(root).position==='static';
@@ -37,8 +37,19 @@ export function addManualControl(item:ContentUnit,hide:()=>void,description="Hid
   const host=doc.createElement('quiet-web-manual');
   // Out of document flow: adding/removing Hide must never change a post's height.
   host.style.cssText=`all:initial!important;display:block!important;position:absolute!important;top:${item.type==='comment'?4:56}px!important;right:10px!important;z-index:2147483645!important;pointer-events:auto!important;`;
-  const shadow=host.attachShadow({mode:'open'}),style=doc.createElement('style');style.textContent=controlCSS;
-  const button=doc.createElement('button');button.type='button';button.textContent='Hide';button.title=description;button.setAttribute('aria-label',`Hide this ${item.type==='comment'?'comment':'post'} with Leak Lock`);button.onclick=event=>{event.preventDefault();event.stopPropagation();hide();};
+  const shadow=host.attachShadow({mode:'open'}),style=doc.createElement('style');style.textContent=controlCSS+`
+    button{display:grid;place-items:center;width:28px;height:28px;min-height:28px;padding:5px;border:1px solid #cbd5e1;border-radius:50%;background:#ffffffed;color:#64748b;opacity:0;transition:opacity 120ms ease;touch-action:manipulation}
+    :host([data-hover]) button{opacity:.65}:host button:hover,:host button:focus-visible{opacity:1;background:#fff;color:#334155}button:active{transform:none;border-bottom-width:1px}svg{width:16px;height:16px;pointer-events:none}
+    @media(hover:none){button{opacity:.65}}
+    @media(prefers-reduced-motion:reduce){button{transition:none}}
+  `;
+  const kind=item.type==='comment'?'comment':item.type==='reel'?'reel':'post';
+  const button=doc.createElement('button');button.type='button';button.title=`Demo: hide this ${kind}`;button.setAttribute('aria-label',`Hide this ${kind} with Leak Lock`);
+  button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.8 5.2A11 11 0 0 1 12 5c6 0 10 7 10 7a18 18 0 0 1-3.1 3.9M6.3 6.3A21 21 0 0 0 2 12s4 7 10 7a11 11 0 0 0 5.7-1.7"/></svg>';
+  button.onclick=event=>{event.preventDefault();event.stopPropagation();hide();};
+  const enter=()=>host.setAttribute('data-hover',''),leave=()=>host.removeAttribute('data-hover');
+  root.addEventListener('pointerenter',enter);root.addEventListener('pointerleave',leave);
+  if(root.matches(':hover'))enter();
   shadow.append(style,button);root.append(host);
-  return {host,restore(){host.remove();if(changed && root.style.position==='relative'){if(priorPosition)root.style.setProperty('position',priorPosition,priority);else root.style.removeProperty('position');if(!hadStyle && !root.style.cssText)root.removeAttribute('style');}}};
+  return {host,restore(){root.removeEventListener('pointerenter',enter);root.removeEventListener('pointerleave',leave);host.remove();if(changed && root.style.position==='relative'){if(priorPosition)root.style.setProperty('position',priorPosition,priority);else root.style.removeProperty('position');if(!hadStyle && !root.style.cssText)root.removeAttribute('style');}}};
 }

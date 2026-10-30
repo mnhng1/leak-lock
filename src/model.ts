@@ -15,6 +15,7 @@ export interface Adapter {
 }
 export interface Rule { id: string; name: string; enabled: boolean; action: Action; terms: string[]; except: string[]; contextTerms?: string[]; }
 export interface Preferences {
+  demoControls?: boolean;
   presetsVersion?: number; enabled: boolean; defaultAction: Action; rules: Rule[]; pausedSites: string[];
   allowedAuthors: string[]; allowedDomains: string[];
 }
@@ -33,4 +34,4 @@ export function presetRule(key: keyof typeof PRESETS, action: Action = 'blur'): 
 export const authorKey = (site: string, author: string) => `${site.toLowerCase()}|${author.trim().toLowerCase()}`;
 
 export function defaultRules(): Rule[] { return (Object.keys(PRESETS) as Array<keyof typeof PRESETS>).map(key=>({...presetRule(key),id:`preset-${key}`,enabled:false})); }
-export const DEFAULTS: Preferences = {presetsVersion:3,enabled:true,defaultAction:'blur',rules:defaultRules(),pausedSites:[],allowedAuthors:[],allowedDomains:[]};
+export const DEFAULTS: Preferences = {presetsVersion:3,enabled:true,demoControls:false,defaultAction:'blur',rules:defaultRules(),pausedSites:[],allowedAuthors:[],allowedDomains:[]};
