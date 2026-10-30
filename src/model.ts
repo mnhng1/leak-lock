@@ -3,7 +3,7 @@ export type ContentType = 'reel' | 'post' | 'comment' | 'thread' | 'news-card' |
 export interface ContentData {
   id: string; site: string; url: string; type: ContentType; author?: string;
   title: string; body: string; caption: string; hashtags: string[]; labels: string[];
-  evidence: string[]; limitations: string[]; domain?: string; community?: string; active?: boolean;
+  evidence: string[]; limitations: string[]; domain?: string; community?: string; active?: boolean; identityHint?: string;
 }
 // DOM roots never cross extension messaging boundaries.
 export interface ContentUnit extends ContentData { root: HTMLElement }

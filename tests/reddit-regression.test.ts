@@ -20,6 +20,15 @@ const fixture=()=>{document.body.innerHTML=`<main>
   </details></shreddit-comment>
 </main>`;};
 describe('Reddit comment boundaries and contextual controls',()=>{
+  it('remembers a manually locked comment after it unmounts and returns',()=>{
+    fixture();engine=new FilterEngine(prefs(),async()=>{});
+    document.querySelector('#reply-body > quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();
+    document.querySelector('shreddit-comment[thingid="reply"]')!.remove();engine.scan();
+    fixture();engine.scan();
+    expect(document.querySelector('#reply-body > quiet-web-controls')).not.toBeNull();
+    document.querySelector('#reply-body > quiet-web-controls')!.shadowRoot!.querySelector('button')!.click();
+    fixture();engine.scan();expect(document.querySelector('#reply-body > quiet-web-controls')).toBeNull();
+  });
   it('extracts each body with its own stable comment metadata',()=>{
     fixture();const roots=reddit.discover(document),candidates=new Set(roots);
     expect(roots.map(r=>r.id)).toEqual(['post','parent-body','reply-body']);

@@ -84,10 +84,14 @@ export const instagram: Adapter = {
       const video=candidate.querySelector('video');
       return {candidate,score:visible>0?visible+(video && !video.paused?1e12:0):0};
     }).sort((a,b)=>b.score-a.score);
-    item.active=ranked[0]?.candidate===root;
+    item.active=!!ranked[0]?.score && ranked[0]?.candidate===root;
 
     const profile=instagramProfile(root),permalink=instagramPermalink(root);
     item.author=profile?instagramPath(profile).split('/').filter(Boolean)[0]:item.author;
+    const caption=Array.from(root.querySelectorAll<HTMLElement>('[role="button"],button')).find(el=>!el.hasAttribute('aria-label') && !el.querySelector('svg,video,[role="button"],button') && (el.textContent?.trim().length ?? 0)>=8)?.textContent?.replace(/\s+/g,' ').trim();
+    // Paired with the active canonical Reel route, this survives recreated blob
+    // URLs without confusing two different reels that share a creator/caption.
+    if(caption && item.author)item.identityHint=JSON.stringify([item.author,caption]);
     // Creator /username/reels/ links and audio links are not reel permalinks.
     // Media identity distinguishes preloaded/recycled reels without borrowing
     // the current page's URL for every video on screen.

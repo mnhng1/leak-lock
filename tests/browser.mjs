@@ -116,12 +116,17 @@ try {
   assert.equal(await redditAuto.getByRole('button',{name:'Add to filter',exact:true}).count(),0);
   assert.equal(await page.locator('#reply-body > quiet-web-manual').count(),1);
   assert.equal(await page.locator('#children').evaluate(el=>!!el.inert || getComputedStyle(el).filter!=='none'),false);
+  const replyMarkup=await page.locator('shreddit-comment[thingid="reply"]').evaluate(el=>{const copy=el.cloneNode(true);copy.querySelectorAll('quiet-web-manual,quiet-web-controls').forEach(e=>e.remove());copy.querySelectorAll('[style]').forEach(e=>e.removeAttribute('style'));return copy.outerHTML;});
   await page.locator('#reply-body > quiet-web-manual').getByRole('button',{name:'Hide this comment with Leak Lock',exact:true}).click();
   const redditManual=page.locator('#reply-body > quiet-web-controls');
   await redditManual.getByText('Locked',{exact:true}).waitFor();
   assert.equal(await redditManual.locator('summary').count(),0);
   assert.equal(await redditManual.getByRole('button',{name:'Add to filter',exact:true}).count(),0);
   assert.ok((await page.locator('#reply-body').boundingBox()).height<150);
+  await page.locator('shreddit-comment[thingid="reply"]').evaluate(el=>el.remove());
+  await page.waitForFunction(()=>!document.querySelector('#reply-body'));
+  await page.evaluate(markup=>document.querySelector('#children').insertAdjacentHTML('beforeend',markup),replyMarkup);
+  await redditManual.getByText('Locked',{exact:true}).waitFor();
   await page.screenshot({path:'evidence/reddit-controls.png',fullPage:true});
   await redditManual.getByRole('button',{name:'Undo hide',exact:true}).click();
   await page.locator('#reply-body > quiet-web-manual').waitFor();
@@ -219,6 +224,7 @@ try {
   assert.equal(await page.locator('.navigation').evaluate(el=>el.inert),false);
   await page.screenshot({path:'evidence/reels-filtered.png',fullPage:true});
   await page.locator('#safe-reel').scrollIntoViewIfNeeded();
+  const reelMarkup=await page.locator('#safe-reel').evaluate(el=>{const copy=el.cloneNode(true);copy.querySelectorAll('quiet-web-manual,quiet-web-controls').forEach(e=>e.remove());copy.querySelectorAll('[style]').forEach(e=>e.removeAttribute('style'));return copy.outerHTML;});
   const reelBefore=await page.locator('#safe-reel').evaluate(el=>({height:el.getBoundingClientRect().height,width:el.getBoundingClientRect().width,scroll:document.querySelector('.feed').scrollTop}));
   await page.locator('#safe-reel > quiet-web-manual').getByRole('button',{name:'Hide this reel with Leak Lock',exact:true}).click();
   const reelManual=page.locator('#safe-reel > quiet-web-controls');
@@ -231,6 +237,12 @@ try {
   assert.ok(Math.abs(lockSize.height-reelBefore.height)<1 && Math.abs(lockSize.width-reelBefore.width)<1,'Lock graphic does not fill the original Reel');
   assert.ok(Math.abs(reelAfter.scroll-reelBefore.scroll)<2,'Locking scrolled the Reels viewport');
   await page.screenshot({path:'evidence/reels-manual.png',fullPage:true});
+  // Virtualized feeds remove offscreen nodes and may update the URL while scrolling.
+  await page.locator('#safe-reel').evaluate(el=>el.remove());
+  await page.evaluate(markup=>{history.pushState({},'','/reels/next/');document.querySelector('.feed').insertAdjacentHTML('beforeend',markup);},reelMarkup);
+  await reelManual.getByText('Locked',{exact:true}).waitFor();
+  await page.evaluate(()=>history.pushState({},'','/reels/regression/'));
+  await reelManual.getByText('Locked',{exact:true}).waitFor();
   await reelManual.getByRole('button',{name:'Undo hide',exact:true}).click();
   await page.locator('#safe-reel > quiet-web-manual').waitFor();
   assert.equal(await page.locator('#safe-reel > quiet-web-controls').count(),0);

@@ -7,7 +7,7 @@ import { FilterEngine } from '../src/engine';
 import { DEFAULTS, presetRule } from '../src/model';
 const fixture=readFileSync('tests/fixtures/instagram-reels.html','utf8');
 let engine:FilterEngine|undefined;
-beforeEach(()=>{document.body.innerHTML=fixture;});
+beforeEach(()=>{history.replaceState({},'','/reels/current/');document.body.innerHTML=fixture;});
 afterEach(()=>{engine?.destroy();engine=undefined;document.body.innerHTML='';});
 const extract=()=>{const roots=instagram.discover(document);return roots.map(root=>instagram.extract(root,new URL(location.href),new Set(roots)));};
 describe('Live-shaped desktop Reels',()=>{
@@ -50,5 +50,33 @@ describe('Live-shaped desktop Reels',()=>{
   it('never falls back to the whole feed for an unidentified player',()=>{
     document.body.innerHTML='<main><div><video></video></div><div><a href="/other/reels/">Other creator</a></div></main>';
     expect(instagram.discover(document)).toHaveLength(0);
+  });
+  it('keeps a lock across Reels URL changes and virtualized remounts, until Undo',()=>{
+    engine=new FilterEngine({...structuredClone(DEFAULTS),demoControls:true},async()=>{});
+    document.querySelector('#safe-reel > quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();
+    history.pushState({},'','/reels/next/');document.body.innerHTML=fixture;engine.scan();
+    expect(document.querySelector('#safe-reel > quiet-web-controls')!.shadowRoot!.querySelector('strong')!.textContent).toBe('Locked');
+    expect(document.querySelector('#unknown-reel > quiet-web-controls')).toBeNull();
+    history.pushState({},'','/reels/current/');document.body.innerHTML=fixture;engine.scan();
+    document.querySelector('#safe-reel > quiet-web-controls')!.shadowRoot!.querySelector('button')!.click();
+    document.body.innerHTML=fixture;engine.scan();
+    expect(document.querySelector('#safe-reel > quiet-web-controls')).toBeNull();
+    expect(document.querySelector('#safe-reel > quiet-web-manual')).not.toBeNull();
+  });
+  it('restores the same Reel with a new blob URL without locking another Reel with the same caption',()=>{
+    const mount=(media:string)=>{
+      document.body.innerHTML=fixture;
+      const root=document.querySelector<HTMLElement>('#safe-reel')!;
+      root.querySelector('video')!.setAttribute('src',`blob:https://www.instagram.com/${media}`);
+      root.getBoundingClientRect=()=>({x:0,y:0,top:0,left:0,right:400,bottom:700,width:400,height:700,toJSON:()=>({})});
+    };
+    mount('original');engine=new FilterEngine({...structuredClone(DEFAULTS),demoControls:true},async()=>{});
+    document.querySelector('#safe-reel > quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();
+    mount('remounted');engine.scan();expect(document.querySelector('#safe-reel > quiet-web-controls')).not.toBeNull();
+    history.pushState({},'','/reels/different/');mount('other');engine.scan();
+    expect(document.querySelector('#safe-reel > quiet-web-controls')).toBeNull();
+    history.pushState({},'','/reels/current/');mount('returned');engine.scan();
+    document.querySelector('#safe-reel > quiet-web-controls')!.shadowRoot!.querySelector('button')!.click();
+    mount('returned-again');engine.scan();expect(document.querySelector('#safe-reel > quiet-web-controls')).toBeNull();
   });
 });

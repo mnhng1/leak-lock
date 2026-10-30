@@ -50,3 +50,7 @@ Demo locks collapse only on Reddit. Instagram Reels retain their original dimens
 ### Consistent Locked presentation (0.3.13)
 
 Automatic and manual hides share the same soft green blur graphic, lock icon, generic Locked title and accessible label. No filter names or matched content appear in the overlay. Reddit uses compact cards for both paths; Reels preserve viewport dimensions even when the associated rule uses collapse. Automatic matches retain temporary Reveal and secondary allowances; demo locks retain Undo only. Regression coverage checks that automatic/manual Reels preserve dimensions and that filter names are absent.
+
+### Scroll persistence (0.3.14)
+
+Manual locks and temporary reveal choices are tracked by content identity independently of mounted DOM roots. URL changes, offscreen removal, and remounting no longer discard those choices. Active canonical Reel routes plus creator/caption metadata alias recreated media URLs without treating the same caption on a different Reel as the same content. Undo clears aliases; disabling demo controls clears manual locks; expired reveals are pruned; refresh ends the in-memory demo session. All 64 unit/DOM tests and the full Chromium extension suite pass, including Reddit comment removal/reinsertion and Reel remounts across URL changes.
