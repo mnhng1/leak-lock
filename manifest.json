@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Leak Lock",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "description": "Hide individual posts, edit your filters, and teach them phrases from content you choose.",
   "minimum_chrome_version": "120",
   "permissions": [

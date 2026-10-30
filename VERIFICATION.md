@@ -46,3 +46,7 @@ Demo-only manual hides now collapse to a compact 88px Locked card with a soft bl
 ### Site-specific demo sizing (0.3.12)
 
 Demo locks collapse only on Reddit. Instagram Reels retain their original dimensions and the lock graphic fills the full Reel. Manual lock controls now contain only Undo hide; Add to filter is removed. Tests cover full Reel dimensions and scroll position, compact Reddit comments, Undo restoration, and manual sizing taking precedence over an automatic collapse rule. Live verification is pending the user enabling demo controls after the Instagram refresh.
+
+### Consistent Locked presentation (0.3.13)
+
+Automatic and manual hides share the same soft green blur graphic, lock icon, generic Locked title and accessible label. No filter names or matched content appear in the overlay. Reddit uses compact cards for both paths; Reels preserve viewport dimensions even when the associated rule uses collapse. Automatic matches retain temporary Reveal and secondary allowances; demo locks retain Undo only. Regression coverage checks that automatic/manual Reels preserve dimensions and that filter names are absent.

@@ -16,7 +16,7 @@ Leak Lock helps people avoid spoilers and unwanted content while keeping the res
 3. Hover over a post or Reel and click the eye-off icon. It shows **Locked** with a soft blur effect. Reddit uses a compact card; Instagram Reels keep their original size.
 4. Choose **Undo hide** to restore it.
 
-Demo controls are off by default. Turning them off restores manual hides. The compact Reddit treatment applies only to demo hides; automatic filters keep their selected display style.
+Demo controls are off by default. Turning them off restores manual hides. Automatic and demo locks share the same soft blur look and “Locked” label. Reddit uses compact cards; Reels retain their original size.
 
 To run the prepared extension, open `chrome://extensions`, enable Developer mode, and load the provided `leak-lock-extension` folder. Reload the extension and refresh your tabs after an update.
 

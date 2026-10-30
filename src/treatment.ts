@@ -8,8 +8,8 @@ export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>v
   host.addEventListener('click',event=>event.stopPropagation());
   host.addEventListener('keydown',event=>event.stopPropagation());
   const demo=!!learning?.manual;
-  const compact=demo && /(^|\.)reddit\.com$/.test(item.site);
-  const collapse=demo?compact:decision.rule?.action==='collapse';
+  const compact=/(^|\.)reddit\.com$/.test(item.site) || (item.type!=='reel' && !demo && decision.rule?.action==='collapse');
+  const collapse=compact;
   const saved: Array<()=>void>=[];
   const originalStyles=new Map<HTMLElement,string|null>();
   function prop(el:HTMLElement,key:string,value:string) {
@@ -45,7 +45,7 @@ export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>v
     .surface:has(form){align-items:flex-start}.panel{max-width:460px;padding:6px;text-align:left}strong{display:block;font-size:15px;margin-bottom:4px}p{margin:4px 0 10px;font-size:12px;color:#3c5d54;overflow-wrap:anywhere}.actions{display:flex;gap:6px;flex-wrap:wrap}
     details{font:12px/1.4 system-ui;align-self:center}summary{cursor:pointer;padding:8px;color:#345b4c}details[open]{width:100%}details[open]>.actions{padding-top:5px}summary:focus-visible{outline:3px solid #b76716;outline-offset:2px}
     button{font:600 12px/1.3 system-ui;min-height:34px;border:1px solid #789b8d;border-radius:7px;padding:7px 10px;color:#163f35;background:white;cursor:pointer}button:first-child{background:#58cc02;color:#173d00;border-color:#48ad00}button:focus-visible{outline:3px solid #b76716;outline-offset:2px}`;
-  if(demo)style.textContent+=`
+  style.textContent+=`
     .surface{position:${compact?'relative':'absolute'};isolation:isolate;min-height:${compact?'88px':'0'};padding:14px 18px;overflow:hidden;background:#f1f8e9;border-radius:16px}
     .surface::before{content:"";position:absolute;inset:-20px;z-index:-1;background:radial-gradient(ellipse at 18% 45%,#c9dfb1 0,transparent 48%),radial-gradient(ellipse at 85% 80%,#dfebd5 0,transparent 50%);filter:blur(16px);opacity:.8;pointer-events:none}
     .panel{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:0;max-width:100%;width:100%}
@@ -53,10 +53,10 @@ export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>v
     .panel>form{flex-basis:100%;margin:6px auto 0}.surface:has(form){align-items:center}
     @media(max-width:360px){.surface{padding:12px}.panel{gap:8px}.lock-mark{width:22px;height:22px}}
   `;
-  const surface=document.createElement('div');surface.className='surface';surface.setAttribute('role','group');surface.setAttribute('aria-label',demo?'Leak Lock locked content':'Leak Lock hidden content');
+  const surface=document.createElement('div');surface.className='surface';surface.setAttribute('role','group');surface.setAttribute('aria-label','Leak Lock locked content');
   const panel=document.createElement('div');panel.className='panel';
-  if(demo){const mark=document.createElement('span');mark.className='lock-mark';mark.setAttribute('aria-hidden','true');mark.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>';panel.append(mark);}
-  const title=document.createElement('strong');title.textContent=demo?'Locked':`Hidden: ${decision.rule?.name}`;
+  {const mark=document.createElement('span');mark.className='lock-mark';mark.setAttribute('aria-hidden','true');mark.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>';panel.append(mark);}
+  const title=document.createElement('strong');title.textContent='Locked';
   const actions=document.createElement('div');actions.className='actions';
   function button(label:string,callback:()=>void,target:HTMLElement=actions) {const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=event=>{event.preventDefault();event.stopPropagation();callback();};target.append(b);}
   button(learning?.manual?'Undo hide':'Reveal for 30s',reveal);

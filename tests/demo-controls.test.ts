@@ -45,18 +45,21 @@ describe('optional demo controls',()=>{
     expect(root.style.height).toBe('auto');expect(root.querySelector('p')!.style.display).toBe('none');
     expect(shadow.querySelector('.lock-mark')).not.toBeNull();
     expect(document.querySelector('#auto p')!.getAttribute('style')).toContain('blur(12px)');
-    expect(document.querySelector('#auto quiet-web-controls')!.shadowRoot!.querySelector('strong')!.textContent).toBe('Hidden: Gambling promotions');
+    expect(document.querySelector('#auto quiet-web-controls')!.shadowRoot!.querySelector('strong')!.textContent).toBe('Locked');
     shadow.querySelector('button')!.click();expect(root.getAttribute('style')).toBe(original);
   });
-  it('preserves a Reels viewport even when the associated automatic rule uses collapse',()=>{
+  it.each([true,false])('preserves a Reels viewport for manual=%s even when the rule uses collapse',manual=>{
     document.body.innerHTML='<div id="reel" style="height:720px;width:405px;display:flex"><div><video></video><p>Caption</p></div></div>';
     const root=document.querySelector<HTMLElement>('#reel')!;
     const item:ContentUnit={root,id:'reel',site:'www.instagram.com',url:'https://www.instagram.com/reels/demo/',type:'reel',title:'',body:'',caption:'',hashtags:[],labels:[],evidence:[],limitations:[]};
-    const treatment=applyTreatment(item,{status:'match',rule:presetRule('golf','collapse')},()=>{},()=>{},{manual:true,rules:[],learn:async()=>{}});
+    const treatment=applyTreatment(item,{status:'match',rule:presetRule('golf','collapse')},()=>{},()=>{},{manual,rules:[],learn:async()=>{}});
     expect(root.style.height).toBe('720px');expect(root.style.width).toBe('405px');expect(root.style.display).toBe('flex');
     expect(root.querySelector('div')!.style.display).not.toBe('none');
     expect(treatment.host.style.position).toBe('absolute');
-    expect([...treatment.host.shadowRoot!.querySelectorAll('button')].map(b=>b.textContent)).toEqual(['Undo hide']);
+    expect(treatment.host.shadowRoot!.querySelector('strong')!.textContent).toBe('Locked');
+    expect(treatment.host.shadowRoot!.querySelector('.lock-mark')).not.toBeNull();
+    expect(treatment.host.shadowRoot!.textContent).not.toContain('Golf content');
+    expect(treatment.host.shadowRoot!.querySelector('button')!.textContent).toBe(manual?'Undo hide':'Reveal for 30s');
     treatment.restore();
   });
 });

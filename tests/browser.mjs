@@ -112,7 +112,7 @@ try {
   await context.route('https://www.reddit.com/regression/**',route=>route.fulfill({status:200,contentType:'text/html',body:`<!doctype html><html><head><meta charset="utf-8"><title>Reddit comment regression</title><style>body{font:16px system-ui;background:#101214;color:#eee;margin:32px auto;max-width:780px}shreddit-post,shreddit-comment{display:block;margin:20px 0}shreddit-post,[slot="comment"]{padding:20px;border:1px solid #53616a;border-radius:14px}[slot="comment"]{position:relative;min-height:180px}#children{margin-left:28px}summary{padding:12px}</style></head><body><h1>Reddit · Comment boundaries</h1><shreddit-post id="reddit-post" post-title="A peaceful thread" permalink="/r/test/comments/one/"><h2>A peaceful thread</h2></shreddit-post><shreddit-comment thingid="parent" author="alice" permalink="/r/test/comments/one/comment/parent/"><details open><summary>Alice · <time>1h</time></summary><div><div slot="comment" id="comment-body"><p>Casino promotion</p></div><div id="children"><shreddit-comment thingid="reply" author="bob" permalink="/r/test/comments/one/comment/reply/"><details open><summary>Bob · 1h</summary><div slot="comment" id="reply-body"><p>A peaceful reply stays readable.</p></div></details></shreddit-comment></div></div></details></shreddit-comment></body></html>`}));
   await page.goto('https://www.reddit.com/regression/comments');
   const redditAuto=page.locator('#comment-body > quiet-web-controls');
-  await redditAuto.getByText('Hidden: Gambling promotions',{exact:true}).waitFor();
+  await redditAuto.getByText('Locked',{exact:true}).waitFor();
   assert.equal(await redditAuto.getByRole('button',{name:'Add to filter',exact:true}).count(),0);
   assert.equal(await page.locator('#reply-body > quiet-web-manual').count(),1);
   assert.equal(await page.locator('#children').evaluate(el=>!!el.inert || getComputedStyle(el).filter!=='none'),false);
@@ -150,7 +150,7 @@ try {
   await learned.getByLabel('Filter content',{exact:true}).fill((await learned.getByLabel('Filter content',{exact:true}).inputValue())+', jackpot club');
   await learned.getByRole('button',{name:'Save',exact:true}).click();
   await page.evaluate(()=>{const article=document.createElement('article');article.id='learned-next';article.innerHTML='<h2>More from the jackpot club</h2>';document.body.append(article);});
-  await page.locator('#learned-next quiet-web-controls').getByText('Hidden: Gambling promotions',{exact:true}).waitFor();
+  await page.locator('#learned-next quiet-web-controls').getByText('Locked',{exact:true}).waitFor();
   assert.equal(await page.locator('#safe-manual quiet-web-controls').count(),0);
   await page.screenshot({path:'evidence/manual-learning.png',fullPage:true});
   // Editing a built-in rule persists, including a new exception and a new display name.
@@ -171,18 +171,18 @@ try {
   await options.getByRole('checkbox',{name:'Enable Golf content',exact:true}).check();
   await page.goto('https://fixture.example/golf');
   await page.evaluate(()=>{const a=document.createElement('article');a.id='golf-card';a.innerHTML='<h2>PGA Tour highlights</h2><p>Practice at the putting green.</p>';document.body.append(a);});
-  await page.locator('#golf-card quiet-web-controls').getByText('Hidden: Golf content',{exact:true}).waitFor();
+  await page.locator('#golf-card quiet-web-controls').getByText('Locked',{exact:true}).waitFor();
   assert.equal(await page.locator('#safe quiet-web-controls').count(),0);
   await options.getByRole('checkbox',{name:'Enable Golf content',exact:true}).uncheck();
   await page.waitForFunction(()=>!document.querySelector('#golf-card quiet-web-controls'));
   await options.getByRole('checkbox',{name:'Enable Dune movie spoilers',exact:true}).check();
   await page.evaluate(()=>{for(const [id,title] of [['dune-spoiler','Dune Part Three ending explained'],['dune-safe','Dune Part Three official trailer'],['other-ending','Another movie ending explained']]){const a=document.createElement('article');a.id=id;const h=document.createElement('h2');h.textContent=title;a.append(h);document.body.append(a);}});
-  await page.locator('#dune-spoiler quiet-web-controls').getByText('Hidden: Dune movie spoilers',{exact:true}).waitFor();
+  await page.locator('#dune-spoiler quiet-web-controls').getByText('Locked',{exact:true}).waitFor();
   assert.equal(await page.locator('#dune-safe quiet-web-controls, #other-ending quiet-web-controls').count(),0);
   await context.route('https://www.reddit.com/regression/context',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><meta charset="utf-8"><title>Community context</title><main><shreddit-post id="community-spoiler" subreddit-prefixed-name="r/dune" permalink="/r/dune/comments/spoiler/" post-title="The ending explained"><h2>The ending explained</h2></shreddit-post><shreddit-post id="community-safe" subreddit-name="dune" permalink="/r/dune/comments/trailer/" post-title="Official trailer"><h2>Official trailer</h2></shreddit-post><shreddit-post id="community-other" subreddit-name="movies" permalink="/r/movies/comments/other/" post-title="The ending explained"><h2>The ending explained</h2></shreddit-post></main>'}));
   await page.goto('https://www.reddit.com/regression/context');
   const communityMatch=page.locator('#community-spoiler > quiet-web-controls');
-  await communityMatch.getByText('Hidden: Dune movie spoilers',{exact:true}).waitFor();
+  await communityMatch.getByText('Locked',{exact:true}).waitFor();
   assert.equal(await communityMatch.getByRole('button',{name:'Add to filter',exact:true}).count(),0);
   assert.equal(await communityMatch.locator('.panel > p').count(),0);
   assert.equal(await page.locator('#community-safe > quiet-web-controls, #community-other > quiet-web-controls').count(),0);
@@ -192,7 +192,7 @@ try {
   await options.getByRole('checkbox',{name:'Enable Golf content',exact:true}).check();
   await context.route('https://www.instagram.com/regression/**',route=>route.fulfill({status:200,contentType:'text/html',body:`<style>body{margin:0;font:16px system-ui}main{max-width:480px;margin:auto}article{display:flex;flex-direction:column;margin:20px 0;border:1px solid #aaa;padding:20px}.media{height:460px;flex-shrink:0;background:#eef3e6}header{height:40px}p{min-height:100px}</style><main><h1 id="noise">Instagram layout fixture</h1><article id="above"><header><a href="/p/above/">1h</a></header><div class="media"></div><p>A peaceful walk</p></article><article id="manual-scroll"><header><a href="/p/manual-scroll/">1h</a></header><div class="media"></div><p>A new cooking lesson</p></article><article id="golf-live"><header><a href="/p/golf-live/">1h</a></header><div class="media"></div><p><span>author</span><span>Poor speed control is holding golfers back on the greens.</span></p></article><article id="below"><header><a href="/p/below/">1h</a></header><div class="media"></div><p>Beautiful mountains</p></article></main>`}));
   await page.goto('https://www.instagram.com/regression/feed');
-  await page.locator('#golf-live quiet-web-controls').getByText('Hidden: Golf content',{exact:true}).waitFor();
+  await page.locator('#golf-live quiet-web-controls').getByText('Locked',{exact:true}).waitFor();
   await page.evaluate(()=>window.scrollTo(0,document.querySelector('#manual-scroll').getBoundingClientRect().top+scrollY-120));
   const before=await page.locator('#manual-scroll').evaluate(el=>({height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,y:scrollY}));
   await page.locator('#manual-scroll quiet-web-manual').getByRole('button',{name:'Hide this post with Leak Lock'}).click();
@@ -209,12 +209,13 @@ try {
   await context.route('https://www.instagram.com/reels/regression/',route=>route.fulfill({status:200,contentType:'text/html',body:readFileSync(new URL('./fixtures/instagram-reels.html',import.meta.url),'utf8')}));
   await page.goto('https://www.instagram.com/reels/regression/');
   const reelAuto=page.locator('#golf-reel > quiet-web-controls');
-  await reelAuto.getByText('Hidden: Golf content',{exact:true}).waitFor();
+  await reelAuto.getByText('Locked',{exact:true}).waitFor();
   assert.equal(await page.locator('quiet-web-controls').count(),1);
   assert.equal(await page.locator('quiet-web-manual').count(),2);
   await reelAuto.locator('summary').click();
   await reelAuto.getByRole('button',{name:'Allow @chalet_golf',exact:true}).waitFor();
   await reelAuto.locator('summary').click();
+  await page.waitForFunction(()=>document.querySelector('#golf-reel > quiet-web-controls').shadowRoot.querySelector('details').getAnimations({subtree:true}).every(a=>a.playState==='finished' || a.playState==='idle'));
   assert.equal(await page.locator('.navigation').evaluate(el=>el.inert),false);
   await page.screenshot({path:'evidence/reels-filtered.png',fullPage:true});
   await page.locator('#safe-reel').scrollIntoViewIfNeeded();
