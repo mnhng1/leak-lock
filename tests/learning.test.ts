@@ -68,7 +68,7 @@ describe('manual hide and example workflow',()=>{
     const learn=vi.fn(async(id:string,phrase:string)=>{p=learnRule(p,id,phrase);engine!.update(p);});
     engine=new FilterEngine(p,async()=>{},document,learn);
     document.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();
-    expect(engine.status.hidden).toBe(1);expect(shadow().textContent).toContain('Hidden by you');
+    expect(engine.status.hidden).toBe(1);expect(shadow().textContent).toContain('Locked');
     click('Add to filter');const input=shadow().querySelector('input')!;input.value='Rainbow noodles';
     input.focus();engine.scan();expect(shadow().querySelector('input')!.value).toBe('Rainbow noodles');expect(shadow().activeElement?.getAttribute('aria-label')).toBe('Matching phrase');
     shadow().querySelector('form')!.dispatchEvent(new Event('submit',{cancelable:true}));await Promise.resolve();await Promise.resolve();

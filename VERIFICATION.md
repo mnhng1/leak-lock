@@ -38,3 +38,7 @@ Validation: TypeScript passes; 55 unit tests pass; the Chromium extension suite 
 ### Optional demo controls 0.3.9
 
 Manual controls default off for new and existing settings. Three new unit regressions cover preference validation/backward compatibility, automatic filtering without demo controls, and toggling off to restore manual hides while preserving automatic matches. Strict TypeScript, all 58 unit tests and the full Chromium suite pass. Browser checks verify saved toggle persistence, 28px icon size, zero opacity off-hover, hover visibility, keyboard focus, manual hide, toggle-off cleanup and unchanged automatic filtering. Browser MCP independently checked Settings → Demo controls in the HTTP sample UI, confirmed persistence after reload, and returned the sample preference to off. Reduced motion disables the short fade; touch devices retain a visible low-opacity button. The live installed extension needs reload to pick up 0.3.9.
+
+### Compact demo locks (0.3.11)
+
+Demo-only manual hides now collapse to a compact 88px Locked card with a soft blurred green background and a lock icon. Automatic matches keep their configured style and labels. Undo restores original inline layout. Strict TypeScript, 59 unit tests and the Chromium extension suite pass, including compact post/Reel sizing, form access, and restoring reel height. Live Instagram verification measured a demo reel shrinking from about 870px to 88px with the Locked label. README is rewritten for the pitch; implementation details and the options footer tagline are removed.

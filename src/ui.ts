@@ -42,7 +42,7 @@ function ruleEditor(rule:Rule){
   const card=el('details');card.className='rule-card';card.dataset.rule=rule.id;const summary=el('summary',rule.name);card.append(summary);
   const form=el('form');form.className='editor';form.setAttribute('aria-label',`Edit ${rule.name}`);
   const name=el('input');name.value=rule.name;name.required=true;name.maxLength=160;
-  const content=el('textarea');content.value=formatContent(rule);content.required=true;content.rows=4;content.placeholder='golf, PGA Tour, tee time';
+  const content=el('textarea');content.value=formatContent(rule);content.required=true;content.rows=4;content.placeholder='Words or phrases to hide…';
   for(const [text,input] of [['Name',name],['Filter content',content]] as const){const label=el('label',text);label.append(input);form.append(label);}
   const actions=el('div');actions.className='row';const submit=el('button','Save');submit.className='primary';submit.type='submit';const remove=el('button','Delete');remove.type='button';remove.className='danger';remove.setAttribute('aria-label',`Delete ${rule.name}`);remove.onclick=()=>run(async()=>{prefs.rules=prefs.rules.filter(r=>r.id!==rule.id);await save();});actions.append(submit,remove);form.append(actions);
   form.onsubmit=event=>{event.preventDefault();run(async()=>{const parsed=parseContent(content.value);const updated={...rule,name:name.value.trim(),...parsed};if(!('contextTerms' in parsed))delete updated.contextTerms;prefs.rules=prefs.rules.map(r=>r.id===rule.id?updated:r);await save();});};card.append(form);row.append(quickToggle,card);return row;

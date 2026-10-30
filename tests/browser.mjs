@@ -46,7 +46,7 @@ try {
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#safe quiet-web-manual').shadowRoot.querySelector('button')).opacity==='1');
   await page.screenshot({path:'evidence/demo-hover.png',fullPage:true});
   await demoButton.click();
-  await page.locator('#safe quiet-web-controls').getByText('Hidden by you',{exact:true}).waitFor();
+  await page.locator('#safe quiet-web-controls').getByText('Locked',{exact:true}).waitFor();
   await options.getByRole('checkbox',{name:'Demo controls',exact:true}).uncheck();
   await page.waitForFunction(()=>!document.querySelector('quiet-web-manual, #safe quiet-web-controls'));
   assert.equal(await page.locator('quiet-web-controls').count(),2);
@@ -118,7 +118,7 @@ try {
   assert.equal(await page.locator('#children').evaluate(el=>!!el.inert || getComputedStyle(el).filter!=='none'),false);
   await page.locator('#reply-body > quiet-web-manual').getByRole('button',{name:'Hide this comment with Leak Lock',exact:true}).click();
   const redditManual=page.locator('#reply-body > quiet-web-controls');
-  await redditManual.getByText('Hidden by you',{exact:true}).waitFor();
+  await redditManual.getByText('Locked',{exact:true}).waitFor();
   assert.equal(await redditManual.locator('summary').count(),0);
   await redditManual.getByRole('button',{name:'Add to filter',exact:true}).click();
   await redditManual.getByLabel('Matching phrase',{exact:true}).fill('peaceful reply');
@@ -145,7 +145,7 @@ try {
   await page.evaluate(()=>{document.body.innerHTML='<h1>Manual demo</h1><article id="manual"><h2>Join the jackpot club</h2><p>Special offers from the jackpot club.</p></article><article id="safe-manual"><h2>Quiet nature photography</h2></article>';});
   await page.locator('#manual quiet-web-manual').getByRole('button',{name:'Hide this post with Leak Lock'}).click();
   const manual=page.locator('#manual quiet-web-controls');
-  await manual.getByText('Hidden by you',{exact:true}).waitFor();
+  await manual.getByText('Locked',{exact:true}).waitFor();
   await manual.getByRole('button',{name:'Add to filter',exact:true}).click();
   await manual.getByLabel('Filter',{exact:true}).selectOption({label:'Gambling promotions'});
   await manual.getByLabel('Matching phrase',{exact:true}).fill('jackpot club');
@@ -201,12 +201,13 @@ try {
   await page.evaluate(()=>window.scrollTo(0,document.querySelector('#manual-scroll').getBoundingClientRect().top+scrollY-120));
   const before=await page.locator('#manual-scroll').evaluate(el=>({height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,y:scrollY}));
   await page.locator('#manual-scroll quiet-web-manual').getByRole('button',{name:'Hide this post with Leak Lock'}).click();
-  await page.locator('#manual-scroll quiet-web-controls').getByText('Hidden by you',{exact:true}).waitFor();
+  await page.locator('#manual-scroll quiet-web-controls').getByText('Locked',{exact:true}).waitFor();
+  const collapsed=await page.locator('#manual-scroll').evaluate(el=>({height:el.getBoundingClientRect().height,y:scrollY}));
   await page.evaluate(()=>{window.__sameControl=document.querySelector('#manual-scroll quiet-web-controls');for(let i=0;i<20;i++){document.querySelector('#noise').textContent='Instagram layout fixture '+i;document.querySelector('#manual-scroll header a').textContent=i+'h';}});
   await page.waitForTimeout(800);
   const after=await page.locator('#manual-scroll').evaluate(el=>({height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,y:scrollY,same:window.__sameControl===el.querySelector('quiet-web-controls')}));
-  assert.ok(Math.abs(after.height-before.height)<1,`Hide changed height: ${before.height} -> ${after.height}`);
-  assert.ok(Math.abs(after.y-before.y)<2,`Hide scrolled the page: ${before.y} -> ${after.y}`);
+  assert.ok(after.height<150 && after.height<before.height/2,`Demo hide did not collapse: ${before.height} -> ${after.height}`);
+  assert.ok(Math.abs(after.y-collapsed.y)<2,`Rescanning scrolled the page: ${collapsed.y} -> ${after.y}`);
   assert.ok(after.same,'An unrelated mutation replaced the hidden-post controls');
   assert.equal(await page.locator('#below quiet-web-controls').count(),0);
   // Live-shaped Reels: deep div wrappers, creator /reels/ links, no articles.
@@ -225,17 +226,17 @@ try {
   const reelBefore=await page.locator('#safe-reel').evaluate(el=>({height:el.getBoundingClientRect().height,scroll:document.querySelector('.feed').scrollTop}));
   await page.locator('#safe-reel > quiet-web-manual').getByRole('button',{name:'Hide this reel with Leak Lock',exact:true}).click();
   const reelManual=page.locator('#safe-reel > quiet-web-controls');
-  await reelManual.getByText('Hidden by you',{exact:true}).waitFor();
+  await reelManual.getByText('Locked',{exact:true}).waitFor();
   await reelManual.getByRole('button',{name:'Add to filter',exact:true}).click();
   await reelManual.getByLabel('Matching phrase',{exact:true}).waitFor();
   await reelManual.getByRole('button',{name:'Cancel',exact:true}).click();
   const reelAfter=await page.locator('#safe-reel').evaluate(el=>({height:el.getBoundingClientRect().height,scroll:document.querySelector('.feed').scrollTop}));
-  assert.ok(Math.abs(reelAfter.height-reelBefore.height)<1);
-  assert.ok(Math.abs(reelAfter.scroll-reelBefore.scroll)<2);
+  assert.ok(reelAfter.height<150 && reelAfter.height<reelBefore.height/2);
   await page.screenshot({path:'evidence/reels-manual.png',fullPage:true});
   await reelManual.getByRole('button',{name:'Undo hide',exact:true}).click();
   await page.locator('#safe-reel > quiet-web-manual').waitFor();
   assert.equal(await page.locator('#safe-reel > quiet-web-controls').count(),0);
+  assert.ok(Math.abs((await page.locator('#safe-reel').boundingBox()).height-reelBefore.height)<1);
   await page.locator('#golf-reel video').evaluate(el=>{el.src='blob:https://www.instagram.com/recycled';el.closest('.reel').querySelector('.caption [role="button"]').textContent='Peaceful nature';});
   await page.waitForFunction(()=>!document.querySelector('#golf-reel > quiet-web-controls'));
   assert.deepEqual(errors,[]);

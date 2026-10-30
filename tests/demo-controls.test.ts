@@ -32,4 +32,17 @@ describe('optional demo controls',()=>{
     expect(document.querySelector('#manual')!.getAttribute('style')).toBe('color:red');
     expect(document.querySelector('#auto quiet-web-controls')).not.toBeNull();
   });
+  it('uses a compact Locked card only for demo hides and restores the original layout',()=>{
+    document.body.innerHTML='<article id="auto"><p>Casino promotion</p></article><article id="demo" style="height:640px;min-height:500px;display:flex;padding:20px"><p>A quiet afternoon</p></article>';
+    engine=new FilterEngine({...structuredClone(DEFAULTS),demoControls:true,rules:[presetRule('gambling')]},async()=>{});
+    const root=document.querySelector<HTMLElement>('#demo')!,original=root.getAttribute('style');
+    root.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();
+    const shadow=root.querySelector('quiet-web-controls')!.shadowRoot!;
+    expect(shadow.querySelector('strong')!.textContent).toBe('Locked');
+    expect(root.style.height).toBe('auto');expect(root.querySelector('p')!.style.display).toBe('none');
+    expect(shadow.querySelector('.lock-mark')).not.toBeNull();
+    expect(document.querySelector('#auto p')!.getAttribute('style')).toContain('blur(12px)');
+    expect(document.querySelector('#auto quiet-web-controls')!.shadowRoot!.querySelector('strong')!.textContent).toBe('Hidden: Gambling promotions');
+    shadow.querySelector('button')!.click();expect(root.getAttribute('style')).toBe(original);
+  });
 });
