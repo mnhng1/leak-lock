@@ -1,15 +1,17 @@
 import { chooseAdapter } from './adapters';
 import { evaluate } from './classifier';
-import { authorKey, type Preferences, type Status } from './model';
-import { addManualControl, type Learn } from './manual';
+import { authorKey, type ContentUnit, type Preferences, type Status } from './model';
+import { addManualControl, type Learn, type ManualControl } from './manual';
 import { applyTreatment, type Treatment } from './treatment';
-type RecordState={fingerprint:string;treatment?:Treatment;manualHost?:HTMLElement;manualHidden?:boolean;revealedUntil?:number};
+type RecordState={identity:string;signature?:string;item:ContentUnit;treatment?:Treatment;manual?:ManualControl;manualHidden?:boolean;revealedUntil?:number};
 export class FilterEngine {
   private records=new Map<HTMLElement,RecordState>();
   private timer?:ReturnType<typeof setTimeout>;
   private observer:MutationObserver;
   private navigation:ReturnType<typeof setInterval>;
+  private revealTimers=new Set<ReturnType<typeof setTimeout>>();
   private lastURL='';
+  private revision=0;
   private onViewport=()=>{if(this.status.adapter==='instagram-reels')this.schedule();};
   status:Status={adapter:'generic',scanned:0,hidden:0,insufficient:0,paused:false};
   constructor(private prefs:Preferences,private mutate:(kind:'author'|'domain',value:string)=>Promise<void>,private doc:Document=document,private learn:Learn=async()=>{throw new Error('Learning unavailable');}) {
@@ -22,65 +24,72 @@ export class FilterEngine {
     this.navigation=setInterval(()=>{if(this.lastURL!==this.doc.location.href)this.schedule();},700);
     this.scan();
   }
-  private observe(){this.observer.observe(this.doc.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['href','src','aria-label','alt','post-id','thingid','permalink','author','data-post-id','data-comment-id']});}
+  private observe(){this.observer.observe(this.doc.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['href','src','aria-label','alt','post-id','thingid','permalink','author','data-author','data-permalink','data-post-id','data-comment-id','subreddit-name','subreddit-prefixed-name','data-subreddit']});}
   private schedule(){if(!this.timer)this.timer=setTimeout(()=>{this.timer=undefined;this.scan();},180);}
-  update(prefs:Preferences){this.prefs=prefs;for(const state of this.records.values())state.revealedUntil=undefined;this.scan();}
+  private clearView(state:RecordState,focus=false){state.manual?.restore();state.manual=undefined;state.treatment?.restore(focus);state.treatment=undefined;}
+  update(prefs:Preferences){this.prefs=prefs;this.revision++;for(const state of this.records.values())state.revealedUntil=undefined;this.scan();}
   scan() {
     this.observer.disconnect();
     try {
       const url=new URL(this.doc.location.href),navigated=this.lastURL!==url.href;
       this.lastURL=url.href;
-      // Restore before extraction so treatments cannot contaminate evidence or discovery.
-      const controlState=new Map<HTMLElement,{focused?:string;expanded:boolean;fingerprint:string;learning?:HTMLFormElement}>();
-      for(const [root,state] of this.records){
-        const shadow=state.treatment?.host.shadowRoot;
-        if(shadow)controlState.set(root,{focused:shadow.activeElement?.getAttribute('aria-label') || shadow.activeElement?.textContent || undefined,expanded:shadow.querySelector('details')?.open ?? false,fingerprint:state.fingerprint,learning:shadow.querySelector('form') || undefined});
-        state.manualHost?.remove();state.manualHost=undefined;state.treatment?.restore(false);state.treatment=undefined;
-      }
+      if(navigated){for(const state of this.records.values())this.clearView(state);this.records.clear();}
       const adapter=chooseAdapter(url,this.doc);
       const roots=adapter.discover(this.doc).filter(el=>el.isConnected && !el.closest('nav,header,footer,aside,quiet-web-controls,quiet-web-manual'));
       const candidates=new Set(roots);
-      for(const root of this.records.keys())if(!candidates.has(root))this.records.delete(root);
+      for(const [root,state] of this.records)if(!candidates.has(root)){this.clearView(state);this.records.delete(root);}
       this.status={adapter:adapter.id,scanned:0,hidden:0,insufficient:0,paused:!this.prefs.enabled || this.prefs.pausedSites.includes(url.hostname)};
-      if(this.status.paused) {this.records.clear();return;}
+      if(this.status.paused){for(const state of this.records.values())this.clearView(state);this.records.clear();return;}
       for(const root of roots) {
         const item=adapter.extract(root,url,candidates);
         const {root:_,active:__,...serializable}=item;
-        const fingerprint=JSON.stringify([serializable,root.querySelector('video')?.getAttribute('src'),root.querySelector('source')?.getAttribute('src')]);
+        const fingerprint=JSON.stringify(serializable);
+        const identity=item.url!==url.href || root.matches('[post-id],[thingid],[data-post-id],[data-comment-id],shreddit-post,shreddit-comment') || root.querySelector('shreddit-post') || /\/(?:p|reel|reels|comments)\/[^/]+/.test(item.url)?`${item.id}|${item.url}`:JSON.stringify([fingerprint,root.querySelector('video')?.getAttribute('src')]);
         let state=this.records.get(root);
-        if(!state || state.fingerprint!==fingerprint || navigated) {state={fingerprint};this.records.set(root,state);}
+        if(!state || state.identity!==identity){if(state)this.clearView(state);state={identity,item};this.records.set(root,state);}
+        state.item=item;
         this.status.scanned++;
         const decision=evaluate(item,this.prefs);
         if(decision.status==='insufficient')this.status.insufficient++;
         const covered=[...this.records].some(([other,s])=>other!==root && other.contains(root) && !!s.treatment);
-        if(covered)continue;
-        if(!state.manualHidden && (decision.status!=='match' || (state.revealedUntil ?? 0)>Date.now())) {
-          const current=state;
-          state.manualHost=addManualControl(item,()=>{current.manualHidden=true;current.revealedUntil=undefined;this.scan();});
+        if(covered){this.clearView(state);state.signature=undefined;continue;}
+        const hidden=!!state.manualHidden || (decision.status==='match' && (state.revealedUntil ?? 0)<=Date.now());
+        const signature=JSON.stringify([hidden,!!state.manualHidden,decision.rule,decision.term,decision.field,decision.contextTerm,this.revision,item.author,item.domain]);
+        // Keep controls and focus in place. Restoring/reinserting the whole feed on
+        // every mutation forced layout and repeatedly moved Instagram's scroll anchor.
+        if(state.signature===signature && (hidden?state.treatment?.host.isConnected:state.manual?.host.isConnected)) {
+          state.treatment?.refresh();
+          if(hidden)this.status.hidden++;
           continue;
         }
-        // A matching parent already covers this child; its own text was evaluated independently.
-        if([...this.records].some(([other,s])=>other!==root && other.contains(root) && !!s.treatment))continue;
+        const previous=state.treatment?.host.shadowRoot;
+        const form=previous?.querySelector('form');
+        const expanded=previous?.querySelector('details')?.open;
+        const focused=previous?.activeElement?.getAttribute('aria-label') || previous?.activeElement?.textContent;
+        this.clearView(state);
+        state.signature=signature;
         const current=state;
-        state.treatment=applyTreatment(item,decision,()=>{
-          current.manualHidden=false;current.revealedUntil=Date.now()+30_000;current.treatment?.restore();current.treatment=undefined;this.scan();
-          setTimeout(()=>this.schedule(),30_010);
-        },kind=>{void this.mutate(kind,kind==='author'?authorKey(item.site,item.author!):item.domain || item.site).catch(error=>{
-          const p=current.treatment?.host.shadowRoot?.querySelector('p');if(p)p.textContent=`Could not save: ${String(error)}`;
-        });},{rules:this.prefs.rules,learn:this.learn,manual:!!state.manualHidden});
-        const previous=controlState.get(root);
-        if(previous?.fingerprint===fingerprint && !navigated){
-          const shadow=state.treatment.host.shadowRoot!;
-          const more=shadow.querySelector('details');if(more)more.open=previous.expanded;
-          if(previous.learning){
-            shadow.querySelector('.panel')?.append(previous.learning);
-          }
-          const focused=[...shadow.querySelectorAll<HTMLElement>('button,summary,input,select')].find(el=>(el.getAttribute('aria-label') || el.textContent)===previous.focused);
-          focused?.focus({preventScroll:true});
+        if(!hidden){
+          const active=this.prefs.rules.filter(r=>r.enabled).map(r=>r.name).join(', ');
+          const reason=decision.status==='allowed'?'Allowed author or domain.':decision.status==='insufficient'?'Not enough text evidence.':'No text rule matched.';
+          state.manual=addManualControl(item,()=>{current.manualHidden=true;current.revealedUntil=undefined;this.scan();current.treatment?.host.shadowRoot?.querySelector('button')?.focus({preventScroll:true});},`${reason} ${active?`Active filters: ${active}`:'No filters are on.'}`);
+          continue;
         }
+        state.treatment=applyTreatment(item,decision,()=>{
+          current.manualHidden=false;current.revealedUntil=Date.now()+30_000;
+          this.clearView(current,true);current.signature=undefined;this.scan();
+          const timer=setTimeout(()=>{this.revealTimers.delete(timer);this.schedule();},30_010);this.revealTimers.add(timer);
+        },kind=>{const latest=current.item;void this.mutate(kind,kind==='author'?authorKey(latest.site,latest.author!):latest.domain || latest.site).catch(error=>{
+          const panel=current.treatment?.host.shadowRoot?.querySelector('.panel');
+          if(panel){let p=panel.querySelector<HTMLParagraphElement>('.allow-error');if(!p){p=this.doc.createElement('p');p.className='allow-error';p.setAttribute('role','status');panel.append(p);}p.textContent=`Could not save: ${String(error)}`;}
+        });},{rules:this.prefs.rules,learn:this.learn,manual:!!state.manualHidden});
+        const shadow=state.treatment.host.shadowRoot!;
+        const more=shadow.querySelector('details');if(more && expanded)more.open=true;
+        if(form)shadow.querySelector('.panel')?.append(form);
+        if(focused)[...shadow.querySelectorAll<HTMLElement>('button,summary,input,select')].find(el=>(el.getAttribute('aria-label') || el.textContent)===focused)?.focus({preventScroll:true});
         this.status.hidden++;
       }
     } finally {this.observe();}
   }
-  destroy(){this.doc.defaultView?.removeEventListener('scroll',this.onViewport,true);this.doc.defaultView?.removeEventListener('resize',this.onViewport);clearInterval(this.navigation);clearTimeout(this.timer);this.observer.disconnect();for(const state of this.records.values()){state.manualHost?.remove();state.treatment?.restore();}this.records.clear();}
+  destroy(){this.doc.defaultView?.removeEventListener('scroll',this.onViewport,true);this.doc.defaultView?.removeEventListener('resize',this.onViewport);clearInterval(this.navigation);clearTimeout(this.timer);for(const timer of this.revealTimers)clearTimeout(timer);this.observer.disconnect();for(const state of this.records.values())this.clearView(state,true);this.records.clear();}
 }

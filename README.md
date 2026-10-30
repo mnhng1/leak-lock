@@ -1,4 +1,4 @@
-# Leak Lock · 0.3.4
+# Leak Lock · 0.3.5
 
 A local Chrome extension that hides individual posts, reels, comments and news sections. Six editable starter filters, custom phrases, manual hiding, and learning from posts you choose. No account, server, analytics or API key.
 
@@ -27,7 +27,7 @@ Builds, browser tests and the preview server all use that destination. Without t
 
 ### Golf filter (temporary built-in)
 
-Version 0.3.4 adds **Golf content** to existing installations, initially off. Turn it on in **Your filters**. Its editable phrases cover golf/golfers/golfing, PGA/LPGA, tee times, driving ranges, putting greens, fairways and common golf hashtags. It can also receive phrases through **Hide → Add to filter**. Previously edited filters are preserved. A deleted Golf filter stays deleted after this migration.
+Version 0.3.7 adds **Golf content** to existing installations, initially off. Turn it on in **Your filters**. Its editable phrases cover golf/golfers/golfing, PGA/LPGA, tee times, driving ranges, putting greens, fairways and common golf hashtags. It can also receive phrases through **Hide → Add to filter**. Previously edited filters are preserved. A deleted Golf filter stays deleted after this migration.
 
 This is a hard-coded starter requested for testing, not universal semantic AI. Text without one of its phrases can pass; video-only golf cannot be recognized. Explanations show the actual matching phrase.
 
@@ -43,7 +43,7 @@ For a quick demo, **Hide** immediately blurs a supported post without saving or 
 - **Edit a starter or custom filter:** click its name, edit **Name** and **Filter content**, then **Save**. There is no nested editor or separate add-phrase box. Existing blur/collapse style remains unchanged.
 - **Add a filter:** enter a name and filter content. A blank name is generated from the content. Match text can be separated by commas or lines. Existing exceptions appear as `Keep: ...`; context requirements appear as `Only with: ...` in the same content box, so editing does not silently lose them. These are text matching rules, not semantic AI.
 - **Hide a missed post:** use **Hide** injected into each supported content unit. This immediately blurs it; **Undo hide** restores it. No rule match is invented.
-- **Teach an existing filter:** on a hidden post, choose **Add to filter**, select a filter, review/edit the suggested phrase, and choose **Add & enable**. This appends one phrase to that filter and enables it. It also works on automatically hidden posts. Future content matching that phrase is categorized under the selected filter.
+- **Teach an existing filter:** after manually hiding a post or comment, choose **Add to filter**, select a filter, review/edit the suggested phrase, and choose **Add & enable**. This appends one phrase to that filter and enables it. Automatically filtered items already belong to a filter, so they show Reveal and Always allow instead. Future content matching that phrase is categorized under the selected filter.
 - **Reveal** automatic matches for 30 seconds. Navigation, changed content and preferences can end the reveal early.
 - **Always allow…** saves an author scoped to the current hostname, or an exact source domain. **Allowed & paused** lets you remove allowances and resume sites.
 - The popup offers **Pause this site**. The options page has a global on/off control. Pauses and allowances persist. Manual hides are per-page session and reset on changed/recycled content or navigation.
@@ -55,7 +55,7 @@ Matching is literal, Unicode-aware, case-insensitive whole-word/phrase matching.
 ## Coverage and privacy
 
 - **Instagram desktop:** Reels use captions, hashtags and accessible metadata within bounded single-video units. Semantic image/feed articles also get post controls. Missing useful metadata means insufficient evidence; the item stays visible but can be hidden manually. No video downloading, capture, OCR, audio analysis or transcription. Playback is unchanged.
-- **Reddit:** modern post components use their outer article boundary; source author/permalink/domain metadata is retained. Old Reddit and reliable comment boundaries are supported. Nested comments are evaluated independently without adding their text to the parent’s evidence.
+- **Reddit:** modern post components use their outer article boundary; source author/permalink/domain metadata is retained. Modern comment text and old Reddit entries are filtered separately from their reply trees. Replies remain visible when a parent comment is hidden. Comments without a reliable body boundary are skipped if they contain replies. Nested comments are evaluated independently without adding their text to the parent’s evidence.
 - **Forums:** schema.org post/comment markup, Discourse posts and explicit structural boundaries.
 - **News:** article cards, sections or paragraph boundaries rather than an entire long article.
 - **Other sites:** conservative short article/role=article units only. Manual controls require a safe discoverable unit; arbitrary page containers are not treated as posts.
@@ -96,3 +96,15 @@ Browser MCP cannot access installed `chrome-extension:` pages, so it tested the 
 Default migration preserves old user filters/edits and installs missing disabled starter categories once. Deleted defaults are not recreated after migration. In-page learning forms preserve edits/focus/pending status across unchanged rescans. Recycled content loses old manual state. Cleanup restores prior inline styles, inert state and focus.
 
 Dropdown panels use a short 220 ms size transition with a subtle fade, including nested settings and in-page allowance controls. Reduced-motion preferences disable these transitions; older browsers keep native instant disclosure behavior.
+
+### Instagram stability fix (0.3.5)
+
+Hide controls now sit outside normal layout flow; unchanged controls stay in the DOM during rescans. Hidden posts treat newly inserted children without rebuilding the overlay. Stable post links preserve manual hides across timestamp/caption updates, while a new permalink resets recycled content. Extraction separates adjacent text nodes and recognizes Instagram /p/ and /reels/ links, excluding audio-track titles from post evidence. Hovering Hide shows whether active rules found text evidence or an allowance applies.
+
+### Reddit and simpler controls (0.3.6)
+
+Automatically filtered posts show the matched rule, Reveal, and secondary Always allow. Add to filter appears only after a manual hide, alongside Undo hide. Comment bodies are treated independently from their replies on modern and old Reddit. A parent comment with no reliable body boundary is skipped rather than covering its whole reply tree.
+
+### Community context and cleaner overlays (0.3.7)
+
+Each Reddit post/comment carries its own community context from metadata or its canonical permalink. Any filter can use that context; separator/camel-case community names are normalized without topic lists. For example, r/dune supplies the Dune context for a spoiler cue, while an ordinary trailer stays visible under the default spoiler rule. Sidebars and other posts never supply community context. The overlay shows only the filter name and actions; matched-word quotes have been removed. This UI change does not add semantic AI.

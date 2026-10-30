@@ -1,7 +1,7 @@
-# Verification · Leak Lock 0.3.4 · 2026-10-29
+# Verification · Leak Lock 0.3.7 · 2026-10-29
 
 - Strict TypeScript: passed.
-- Unit / DOM tests: 37 passed across core and learning suites.
+- Unit / DOM tests: 50 passed across five suites.
 - MV3 production build: passed.
 - Real unpacked extension in isolated Chromium: passed.
 - Browser MCP: inspected the supplied Figma reference; verified the sample HTML demo end to end: unmatched post → Hide → Add to filter → edit phrase → save → new similar post automatically hidden under the selected filter. Adjacent safe post remains visible.
@@ -22,3 +22,9 @@ Dune update: disabled starter requires both Dune context and spoiler cues. Unit 
 Motion update: shared native disclosure transitions, including nested panels and shadow-DOM allowances, with reduced-motion override and an auto-size support guard. Browser MCP verified open/nested/close interaction and computed 220/160 ms transition timing. All 35 unit tests, TypeScript/build and Chromium smoke checks pass.
 
 Two-field UI: removed nested filter editor, chips, add-phrase form and per-rule style/context/exception controls. Name and Filter content are the only editing fields. Parser regressions round-trip all starter constraints and reject empty hide content. Chromium asserts exactly two fields/no nested details, edits/saves content, and verifies learning still appears in that field. Browser MCP verified and saved the simplified Golf editor. All 37 tests and extension smoke checks pass.
+
+Instagram stability: reproduced manual Hide moving the user’s live feed. Replaced whole-feed teardown with persistent per-post controls; Hide is absolute-positioned. New unit regressions cover permalink identity, caption word boundaries/Golf evidence, control identity across repeated rescans, stable manual state and newly inserted hidden children. Chromium’s Instagram-style layout fixture asserts no post-height change, less than 2px scroll change after Hide plus noisy mutations, retained controls and a correctly hidden Golf caption. Browser MCP verified the 0.3.5 controls in the user’s live Reddit feed: manual hide remained stable through repeated observations and Undo restored the target card. The Instagram tab was no longer open; its rebuilt behavior is covered by the browser layout regression.
+
+Reddit and contextual controls (0.3.6): automatic matches have Reveal and secondary Always allow, with no Add to filter. Manual hides offer Undo hide and Add to filter, with no allowance menu. Live inspection found parent comment shells include their replies; extraction/treatment now targets each modern comment body or old Reddit entry. Five new unit regressions and Chromium checks cover independent replies, metadata, manual comment hide/undo, retained forms across timestamp updates, and conservative skipping of unbounded parent comments. Chromium screenshots: evidence/reddit-controls.png and evidence/reddit-replies.png. Live 0.3.6 confirmation is pending reload.
+
+Community context and cleaner overlays (0.3.7): Reddit metadata/canonical permalinks supply each item’s subreddit. Four new unit tests cover r/dune spoiler context, comments, arbitrary community names and sidebar isolation. Chromium covers a title without Dune text in r/dune matching, a safe trailer remaining visible and an unrelated community remaining visible. Overlays omit the matched-word line. Automatically filtered overlays omit Add to filter. These checks use the actual unpacked extension in an isolated profile; live 0.3.7 verification is pending extension reload.

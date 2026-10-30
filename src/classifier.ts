@@ -5,7 +5,10 @@ export function contains(text: string, term: string): boolean {
 }
 export function evaluate(item: ContentData, prefs: Preferences): Decision {
   if (prefs.allowedDomains.includes(item.domain ?? item.site) || (item.author && prefs.allowedAuthors.includes(authorKey(item.site,item.author)))) return {status:'allowed'};
-  const fields = {title:item.title,body:item.body,caption:item.caption,hashtags:item.hashtags.join(' '),labels:item.labels.join(' ')};
+  const community=item.community || '';
+  // Community names are real topic context. Split separators/camel case for any
+  // community, without maintaining topic-specific subreddit lists.
+  const fields = {title:item.title,body:item.body,caption:item.caption,hashtags:item.hashtags.join(' '),labels:item.labels.join(' '),community:[community,community.replace(/[_-]+/g,' ').replace(/([\p{Ll}\p{N}])(\p{Lu})/gu,'$1 $2')].join(' ')};
   const all = Object.values(fields).join(' ');
   for (const rule of prefs.rules) {
     if (!rule.enabled || rule.except.some(term=>contains(all,term))) continue;

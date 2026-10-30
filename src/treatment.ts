@@ -1,6 +1,6 @@
 import { controlCSS, learningForm, type Learn } from './manual';
 import type { ContentUnit, Decision, Rule } from './model';
-export interface Treatment { restore(moveFocus?:boolean): void; host: HTMLElement; }
+export interface Treatment { restore(moveFocus?:boolean): void; host: HTMLElement; refresh():void; }
 export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>void, allow:(kind:'author'|'domain')=>void, learning?:{rules:Rule[];learn:Learn;manual:boolean}):Treatment {
   const root=item.root;
   const host=document.createElement('quiet-web-controls');
@@ -16,20 +16,22 @@ export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>v
     el.style.setProperty(key,value,'important');
     saved.push(()=>{if(el.style.getPropertyValue(key)===value) {if(prior) el.style.setProperty(key,prior,priority);else el.style.removeProperty(key);}});
   }
-  const wrapped: HTMLElement[]=[];
-  for(const node of [...root.childNodes]) if(node.nodeType===Node.TEXT_NODE && node.textContent?.trim()) {
-    const span=document.createElement('span');span.dataset.quietText='';node.replaceWith(span);span.append(node);wrapped.push(span);
+  const wrapped: HTMLElement[]=[],treated=new WeakSet<HTMLElement>();
+  function refresh(){
+    for(const node of [...root.childNodes])if(node.nodeType===Node.TEXT_NODE && node.textContent?.trim()){
+      const span=document.createElement('span');span.dataset.quietText='';node.replaceWith(span);span.append(node);wrapped.push(span);
+    }
+    for(const child of [...root.children])if(child instanceof HTMLElement && child!==host && !child.matches('quiet-web-manual') && !treated.has(child)){
+      treated.add(child);const inert=child.inert;child.inert=true;saved.push(()=>{child.inert=inert;});
+      if(collapse)prop(child,'display','none');else {prop(child,'filter','blur(12px)');prop(child,'user-select','none');prop(child,'pointer-events','none');}
+    }
   }
-  const children=[...root.children].filter((el):el is HTMLElement=>el instanceof HTMLElement);
-  for(const child of children) {
-    const inert=child.inert;child.inert=true;saved.push(()=>{child.inert=inert;});
-    if(collapse) prop(child,'display','none'); else {prop(child,'filter','blur(12px)');prop(child,'user-select','none');prop(child,'pointer-events','none');}
-  }
+  refresh();
   if(getComputedStyle(root).display==='inline')prop(root,'display','block');
   if(getComputedStyle(root).position==='static') prop(root,'position','relative');
   if(collapse) {prop(root,'padding','0px');prop(root,'min-height','0px');prop(root,'height','auto');prop(root,'max-height','none');}
   else prop(root,'min-height','160px');
-  for(const key of ['aria-label','tabindex']) {
+  for(const key of ['tabindex']) {
     const value=root.getAttribute(key);
     if(value!==null) {root.removeAttribute(key);saved.push(()=>{if(!root.hasAttribute(key))root.setAttribute(key,value);});}
   }
@@ -43,18 +45,18 @@ export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>v
   const surface=document.createElement('div');surface.className='surface';surface.setAttribute('role','group');surface.setAttribute('aria-label','Leak Lock hidden content');
   const panel=document.createElement('div');panel.className='panel';
   const title=document.createElement('strong');title.textContent=learning?.manual?'Hidden by you':`Hidden: ${decision.rule?.name}`;
-  const explanation=document.createElement('p');explanation.textContent=learning?.manual?'':`“${decision.term}”${decision.contextTerm?` · ${decision.contextTerm}`:""}${item.type==='reel'?' · text only':''}`;
   const actions=document.createElement('div');actions.className='actions';
   function button(label:string,callback:()=>void,target:HTMLElement=actions) {const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=event=>{event.preventDefault();event.stopPropagation();callback();};target.append(b);}
   button(learning?.manual?'Undo hide':'Reveal for 30s',reveal);
-  if(learning)button('Add to filter',()=>{if(panel.querySelector('form'))return;const form=learningForm(item,learning.rules,learning.learn,()=>form.remove());panel.append(form);form.querySelector('select')?.focus();});
+  if(learning?.manual)button('Add to filter',()=>{if(panel.querySelector('form'))return;const form=learningForm(item,learning.rules,learning.learn,()=>form.remove());panel.append(form);form.querySelector('select')?.focus();});
   const more=document.createElement('details');
   const summary=document.createElement('summary');summary.textContent='Always allow…';more.append(summary);
   const allowances=document.createElement('div');allowances.className='actions';more.append(allowances);
   if(item.author)button(`Allow @${item.author.replace(/^u\//,'')}`,()=>allow('author'),allowances);
   button(`Allow ${item.domain || item.site}`,()=>allow('domain'),allowances);
-  actions.append(more);panel.append(title,explanation,actions);surface.append(panel);style.textContent+=controlCSS;shadow.append(style,surface);root.append(host);
-  return {host,restore(moveFocus=true) {
+  if(!learning?.manual)actions.append(more);
+  panel.append(title,actions);surface.append(panel);style.textContent+=controlCSS;shadow.append(style,surface);root.append(host);
+  return {host,refresh,restore(moveFocus=true) {
     const focused=shadow.activeElement!==null;
     host.remove();saved.reverse().forEach(fn=>fn());
     for(const [el,original] of originalStyles){

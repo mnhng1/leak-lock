@@ -1,4 +1,4 @@
-# Interaction review · Leak Lock 0.3.4
+# Interaction review · Leak Lock 0.3.7
 
 | Control | Behavior |
 |---|---|
@@ -8,7 +8,9 @@
 | Content | Commas/lines define matches; existing Keep: exceptions and Only with: context remain editable in the same field. Text matching is not presented as semantic AI. |
 | New filter | Same two fields; empty name can derive from content. |
 | Manual Hide | Immediate, local to a reliable post boundary, reversible Undo hide. |
-| Add to filter | Explicit existing filter + editable phrase. Save enables the filter; failures preserve the manual hide. |
+| Automatically filtered | Filter name + Reveal; Always allow stays secondary. No redundant Add to filter. |
+| Manually hidden | Undo hide + optional Add to filter. No allowance menu. Existing filter + editable phrase; failed saves preserve the hide. |
+| Reddit comments | Hide only the comment body; keep replies readable and independently filterable. |
 | Reveal | Automatic matches return after 30 seconds. |
 | Always allow | Secondary disclosure for author/domain allowances. |
 | Pause | Current site only; global off disables this control with guidance. |

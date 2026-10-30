@@ -81,6 +81,29 @@ try {
   assert.ok(await page.locator('#modern-card > quiet-web-controls').isVisible());
   await page.locator('#modern-card > quiet-web-controls summary').click();
   await page.locator('#modern-card > quiet-web-controls').getByRole('button',{name:'Allow news.example'}).waitFor();
+  // Modern Reddit comment bodies must never conceal their reply tree.
+  await context.route('https://www.reddit.com/regression/**',route=>route.fulfill({status:200,contentType:'text/html',body:`<!doctype html><html><head><meta charset="utf-8"><title>Reddit comment regression</title><style>body{font:16px system-ui;background:#101214;color:#eee;margin:32px auto;max-width:780px}shreddit-post,shreddit-comment{display:block;margin:20px 0}shreddit-post,[slot="comment"]{padding:20px;border:1px solid #53616a;border-radius:14px}[slot="comment"]{position:relative;min-height:180px}#children{margin-left:28px}summary{padding:12px}</style></head><body><h1>Reddit · Comment boundaries</h1><shreddit-post id="reddit-post" post-title="A peaceful thread" permalink="/r/test/comments/one/"><h2>A peaceful thread</h2></shreddit-post><shreddit-comment thingid="parent" author="alice" permalink="/r/test/comments/one/comment/parent/"><details open><summary>Alice · <time>1h</time></summary><div><div slot="comment" id="comment-body"><p>Casino promotion</p></div><div id="children"><shreddit-comment thingid="reply" author="bob" permalink="/r/test/comments/one/comment/reply/"><details open><summary>Bob · 1h</summary><div slot="comment" id="reply-body"><p>A peaceful reply stays readable.</p></div></details></shreddit-comment></div></div></details></shreddit-comment></body></html>`}));
+  await page.goto('https://www.reddit.com/regression/comments');
+  const redditAuto=page.locator('#comment-body > quiet-web-controls');
+  await redditAuto.getByText('Hidden: Gambling promotions',{exact:true}).waitFor();
+  assert.equal(await redditAuto.getByRole('button',{name:'Add to filter',exact:true}).count(),0);
+  assert.equal(await page.locator('#reply-body > quiet-web-manual').count(),1);
+  assert.equal(await page.locator('#children').evaluate(el=>!!el.inert || getComputedStyle(el).filter!=='none'),false);
+  await page.locator('#reply-body > quiet-web-manual').getByRole('button',{name:'Hide this comment with Leak Lock',exact:true}).click();
+  const redditManual=page.locator('#reply-body > quiet-web-controls');
+  await redditManual.getByText('Hidden by you',{exact:true}).waitFor();
+  assert.equal(await redditManual.locator('summary').count(),0);
+  await redditManual.getByRole('button',{name:'Add to filter',exact:true}).click();
+  await redditManual.getByLabel('Matching phrase',{exact:true}).fill('peaceful reply');
+  await page.locator('time').evaluate(el=>el.textContent='2h');
+  await page.waitForTimeout(400);
+  assert.equal(await redditManual.getByLabel('Matching phrase',{exact:true}).inputValue(),'peaceful reply');
+  await redditManual.getByRole('button',{name:'Cancel',exact:true}).click();
+  await page.screenshot({path:'evidence/reddit-controls.png',fullPage:true});
+  await redditManual.getByRole('button',{name:'Undo hide',exact:true}).click();
+  await page.locator('#reply-body > quiet-web-manual').waitFor();
+  assert.ok(await redditAuto.isVisible());
+  await page.screenshot({path:'evidence/reddit-replies.png',fullPage:true});
   // Reels: the on article is scoped; metadata-free video stays visible.
   await context.route('https://www.instagram.com/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<main><div role="dialog"><article id="reel"><video src="data:video/mp4;base64,"></video><a href="/reel/one/">Casino promotion</a><a href="/author/">author</a></article><article id="unknown"><video></video></article><button id="next">Next reel</button></div></main>'}));
   await page.goto('https://www.instagram.com/reels/one/');
@@ -134,8 +157,31 @@ try {
   await page.evaluate(()=>{for(const [id,title] of [['dune-spoiler','Dune Part Three ending explained'],['dune-safe','Dune Part Three official trailer'],['other-ending','Another movie ending explained']]){const a=document.createElement('article');a.id=id;const h=document.createElement('h2');h.textContent=title;a.append(h);document.body.append(a);}});
   await page.locator('#dune-spoiler quiet-web-controls').getByText('Hidden: Dune movie spoilers',{exact:true}).waitFor();
   assert.equal(await page.locator('#dune-safe quiet-web-controls, #other-ending quiet-web-controls').count(),0);
+  await context.route('https://www.reddit.com/regression/context',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><meta charset="utf-8"><title>Community context</title><main><shreddit-post id="community-spoiler" subreddit-prefixed-name="r/dune" permalink="/r/dune/comments/spoiler/" post-title="The ending explained"><h2>The ending explained</h2></shreddit-post><shreddit-post id="community-safe" subreddit-name="dune" permalink="/r/dune/comments/trailer/" post-title="Official trailer"><h2>Official trailer</h2></shreddit-post><shreddit-post id="community-other" subreddit-name="movies" permalink="/r/movies/comments/other/" post-title="The ending explained"><h2>The ending explained</h2></shreddit-post></main>'}));
+  await page.goto('https://www.reddit.com/regression/context');
+  const communityMatch=page.locator('#community-spoiler > quiet-web-controls');
+  await communityMatch.getByText('Hidden: Dune movie spoilers',{exact:true}).waitFor();
+  assert.equal(await communityMatch.getByRole('button',{name:'Add to filter',exact:true}).count(),0);
+  assert.equal(await communityMatch.locator('.panel > p').count(),0);
+  assert.equal(await page.locator('#community-safe > quiet-web-controls, #community-other > quiet-web-controls').count(),0);
   await options.getByRole('checkbox',{name:'Enable Dune movie spoilers',exact:true}).uncheck();
-  await page.waitForFunction(()=>!document.querySelector('#dune-spoiler quiet-web-controls'));
+  await page.waitForFunction(()=>!document.querySelector('#community-spoiler quiet-web-controls'));
+  // Real layout regression: Instagram-style posts, stable links and a noisy SPA.
+  await options.getByRole('checkbox',{name:'Enable Golf content',exact:true}).check();
+  await context.route('https://www.instagram.com/regression/**',route=>route.fulfill({status:200,contentType:'text/html',body:`<style>body{margin:0;font:16px system-ui}main{max-width:480px;margin:auto}article{display:flex;flex-direction:column;margin:20px 0;border:1px solid #aaa;padding:20px}.media{height:460px;flex-shrink:0;background:#eef3e6}header{height:40px}p{min-height:100px}</style><main><h1 id="noise">Instagram layout fixture</h1><article id="above"><header><a href="/p/above/">1h</a></header><div class="media"></div><p>A peaceful walk</p></article><article id="manual-scroll"><header><a href="/p/manual-scroll/">1h</a></header><div class="media"></div><p>A new cooking lesson</p></article><article id="golf-live"><header><a href="/p/golf-live/">1h</a></header><div class="media"></div><p><span>author</span><span>Poor speed control is holding golfers back on the greens.</span></p></article><article id="below"><header><a href="/p/below/">1h</a></header><div class="media"></div><p>Beautiful mountains</p></article></main>`}));
+  await page.goto('https://www.instagram.com/regression/feed');
+  await page.locator('#golf-live quiet-web-controls').getByText('Hidden: Golf content',{exact:true}).waitFor();
+  await page.evaluate(()=>window.scrollTo(0,document.querySelector('#manual-scroll').getBoundingClientRect().top+scrollY-120));
+  const before=await page.locator('#manual-scroll').evaluate(el=>({height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,y:scrollY}));
+  await page.locator('#manual-scroll quiet-web-manual').getByRole('button',{name:'Hide this post with Leak Lock'}).click();
+  await page.locator('#manual-scroll quiet-web-controls').getByText('Hidden by you',{exact:true}).waitFor();
+  await page.evaluate(()=>{window.__sameControl=document.querySelector('#manual-scroll quiet-web-controls');for(let i=0;i<20;i++){document.querySelector('#noise').textContent='Instagram layout fixture '+i;document.querySelector('#manual-scroll header a').textContent=i+'h';}});
+  await page.waitForTimeout(800);
+  const after=await page.locator('#manual-scroll').evaluate(el=>({height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,y:scrollY,same:window.__sameControl===el.querySelector('quiet-web-controls')}));
+  assert.ok(Math.abs(after.height-before.height)<1,`Hide changed height: ${before.height} -> ${after.height}`);
+  assert.ok(Math.abs(after.y-before.y)<2,`Hide scrolled the page: ${before.y} -> ${after.y}`);
+  assert.ok(after.same,'An unrelated mutation replaced the hidden-post controls');
+  assert.equal(await page.locator('#below quiet-web-controls').count(),0);
   assert.deepEqual(errors,[]);
-  console.log('PASS: Chromium extension install, settings persistence, exact evidence overlays, exceptions, reveal, recycled units, author/domain allowances, infinite append, collapse, pause/resume, nested Reddit comments and Reels scoping. Screenshots saved in evidence/.');
+  console.log('PASS: Chromium extension install, settings persistence, scoped overlays, exceptions, reveal, recycled units, author/domain allowances, infinite append, collapse, pause/resume, nested Reddit comments and Reels scoping. Screenshots saved in evidence/.');
 } catch(error) { for(const p of context.pages()) console.error('PAGE',p.url(),(await p.locator('body').innerText()).slice(-1800));console.error('PAGE ERRORS',errors);throw error;} finally {await context.close();await rm(dir,{recursive:true,force:true});}

@@ -12,8 +12,10 @@ function owned(root: HTMLElement, candidates: Set<HTMLElement>): string {
   const originals = Array.from(root.querySelectorAll('*'));
   const copies = Array.from(clone.querySelectorAll('*'));
   originals.forEach((node,i)=>{ if (candidates.has(node as HTMLElement)) copies[i]?.remove(); });
-  clone.querySelectorAll('script,style,template,nav,button,input,textarea,select,quiet-web-controls,quiet-web-manual,video,audio,[hidden],[aria-hidden="true"],[slot="credit-bar"],[slot="repost-button"],[slot="post-stats-entry-point"]').forEach(el=>el.remove());
-  return (clone.textContent ?? '').replace(/\s+/g,' ').trim().slice(0,16000);
+  clone.querySelectorAll('script,style,template,nav,time,a[href*="/reels/audio/"],button,input,textarea,select,quiet-web-controls,quiet-web-manual,video,audio,[hidden],[aria-hidden="true"],[slot="credit-bar"],[slot="repost-button"],[slot="post-stats-entry-point"]').forEach(el=>el.remove());
+  const walker=root.ownerDocument.createTreeWalker(clone,NodeFilter.SHOW_TEXT),parts:string[]=[];
+  while(walker.nextNode())parts.push(walker.currentNode.textContent || '');
+  return parts.join(' ').replace(/\s+/g,' ').trim().slice(0,16000);
 }
 function ownElement(root: HTMLElement, selector: string, candidates: Set<HTMLElement>): HTMLElement | undefined {
   return Array.from(root.querySelectorAll<HTMLElement>(selector)).find(el=>{
@@ -22,14 +24,13 @@ function ownElement(root: HTMLElement, selector: string, candidates: Set<HTMLEle
     return true;
   });
 }
-function extract(root: HTMLElement, url: URL, candidates: Set<HTMLElement>, type: ContentType): ContentUnit {
-  const metadata=root.matches('article')?root.querySelector('shreddit-post') || root:root;
+function extract(root: HTMLElement, url: URL, candidates: Set<HTMLElement>, type: ContentType, metadata=root.matches('article')?root.querySelector('shreddit-post') || root:root): ContentUnit {
   const title = ownElement(root,'h1,h2,h3,[slot="title"],[data-testid="post-title"]',candidates)?.textContent?.trim() || metadata.getAttribute('post-title') || '';
   const authorEl = ownElement(root,'[rel="author"],[data-author],a[href*="/user/"],a[href*="/u/"],a[slot="authorName"]',candidates);
-  const author = metadata.getAttribute('author') || root.getAttribute('data-author') || authorEl?.getAttribute('data-author') || authorEl?.textContent?.trim();
-  const link = ownElement(root,'a[href*="/reel/"],a[data-permalink],a[rel="bookmark"],a[href*="/comments/"]',candidates);
+  const author = metadata.getAttribute('author') || metadata.getAttribute('data-author') || authorEl?.getAttribute('data-author') || authorEl?.textContent?.trim();
+  const link = ownElement(root,'a[href*="/reel/"],a[href*="/p/"],a[href*="/reels/"]:not([href*="/reels/audio/"]),a[data-permalink],a[rel="bookmark"],a[href*="/comments/"]',candidates);
   let permalink = url.href;
-  try {permalink = new URL(metadata.getAttribute('permalink') || link?.getAttribute('href') || url.href,url).href;} catch { /* malformed site link */ }
+  try {permalink = new URL(metadata.getAttribute('permalink') || metadata.getAttribute('data-permalink') || link?.getAttribute('href') || url.href,url).href;} catch { /* malformed site link */ }
   const body = owned(root,candidates);
   const labels = [root.getAttribute('aria-label'),...Array.from(root.querySelectorAll<HTMLElement>('video[aria-label],img[alt]')).filter(el=>{
     let p=el.parentElement; while(p && p!==root) {if(candidates.has(p)) return false;p=p.parentElement;}return true;
@@ -75,11 +76,26 @@ export const instagram: Adapter = {
     return item;
   }
 };
-export const reddit: Adapter = {id:'reddit',matches:url=>/(^|\.)reddit\.com$/.test(url.hostname),discover:doc=>[...new Set(query(doc,SELECTORS.reddit).map(root=>{
-  if(!root.matches('shreddit-post'))return root;
+const redditComment='shreddit-comment,.thing.comment,[data-testid="comment"]';
+export const reddit: Adapter = {id:'reddit',matches:url=>/(^|\.)reddit\.com$/.test(url.hostname),discover:doc=>[...new Set(query(doc,SELECTORS.reddit).flatMap(root=>{
+  if(root.matches(redditComment)) {
+    // Treat only this comment's body. A Reddit comment shell includes its entire
+    // reply tree, so blurring that shell would also conceal unrelated replies.
+    const body=Array.from(root.querySelectorAll<HTMLElement>('[slot="comment"],.entry,[data-testid="comment-body"]')).find(el=>el.closest(redditComment)===root);
+    return body?[body]:root.querySelector(redditComment)?[]:[root];
+  }
+  if(!root.matches('shreddit-post'))return [root];
   const article=root.closest('article');
-  return article && article.querySelectorAll('shreddit-post').length===1?article:root;
-}))],extract:(root,url,c)=>extract(root,url,c,root.matches('shreddit-comment,.thing.comment,[data-testid="comment"]')?'comment':'post')};
+  return [article && article.querySelectorAll('shreddit-post').length===1 && !article.querySelector(redditComment)?article:root];
+}))],extract:(root,url,c)=>{
+  const comment=root.closest<HTMLElement>(redditComment);
+  const ownedCandidates=new Set([...c,...root.querySelectorAll<HTMLElement>(redditComment)]);
+  const item=comment?extract(root,url,ownedCandidates,'comment',comment):extract(root,url,ownedCandidates,'post');
+  const metadata=comment || root.querySelector('shreddit-post') || root;
+  const community=metadata.getAttribute('subreddit-prefixed-name') || metadata.getAttribute('subreddit-name') || metadata.getAttribute('data-subreddit') || /^\/r\/([^/]+)/i.exec(new URL(item.url).pathname)?.[1];
+  if(community){item.community=`r/${community.replace(/^r\//i,'')}`;item.evidence.push('Reddit community metadata');}
+  return item;
+}};
 export const forum: Adapter = {id:'forum',matches:(_url,doc)=>!!doc.querySelector(SELECTORS.forum),discover:doc=>query(doc,SELECTORS.forum),extract:(root,url,c)=>extract(root,url,c,root.matches('[itemtype$="/Comment"],[data-comment-id],.Comment')?'comment':'post')};
 export const news: Adapter = {
   id:'news',matches:(_url,doc)=>!!doc.querySelector('meta[property="og:type"][content="article"], [itemtype$="/NewsArticle"], main article h1, article section'),
