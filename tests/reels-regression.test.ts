@@ -32,7 +32,8 @@ describe('Live-shaped desktop Reels',()=>{
     expect(manual.shadowRoot!.querySelector('button')!.getAttribute('aria-label')).toBe('Hide this reel with Leak Lock');
     manual.shadowRoot!.querySelector('button')!.click();
     const hidden=document.querySelector('#safe-reel > quiet-web-controls')!;
-    expect(hidden.shadowRoot!.textContent).toContain('Add to filter');
+    expect(hidden.shadowRoot!.querySelectorAll('button')).toHaveLength(1);
+    expect(hidden.shadowRoot!.textContent).not.toContain('Add to filter');
     hidden.shadowRoot!.querySelector('button')!.click();
     expect(document.querySelector('#safe-reel > quiet-web-controls')).toBeNull();
     expect(document.querySelector('.navigation')!.hasAttribute('inert')).toBe(false);

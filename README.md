@@ -13,10 +13,10 @@ Leak Lock helps people avoid spoilers and unwanted content while keeping the res
 
 1. Open Leak Lock, enable a filter, and refresh the feed.
 2. In **Settings**, turn on **Demo controls**.
-3. Hover over a post or Reel and click the eye-off icon. It becomes a compact **Locked** card with a soft blur effect.
-4. Choose **Undo hide** to restore it, or **Add to filter** to demonstrate hiding similar text next time.
+3. Hover over a post or Reel and click the eye-off icon. It shows **Locked** with a soft blur effect. Reddit uses a compact card; Instagram Reels keep their original size.
+4. Choose **Undo hide** to restore it.
 
-Demo controls are off by default. Turning them off restores manual hides. The compact Locked treatment applies only to demo hides; automatic filters keep their selected display style.
+Demo controls are off by default. Turning them off restores manual hides. The compact Reddit treatment applies only to demo hides; automatic filters keep their selected display style.
 
 To run the prepared extension, open `chrome://extensions`, enable Developer mode, and load the provided `leak-lock-extension` folder. Reload the extension and refresh your tabs after an update.
 

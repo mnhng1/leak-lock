@@ -39,12 +39,12 @@ describe('Reddit comment boundaries and contextual controls',()=>{
     expect(shadow.querySelector('details')).not.toBeNull();
     expect(shadow.querySelector('.panel > p')).toBeNull();
   });
-  it('offers learning only after a manual hide and undoes that comment independently',()=>{
+  it('offers only Undo after a demo hide and restores that comment independently',()=>{
     fixture();engine=new FilterEngine(prefs(),async()=>{});
     const button=document.querySelector('#reply-body > quiet-web-manual')!.shadowRoot!.querySelector('button')!;
     expect(button.getAttribute('aria-label')).toBe('Hide this comment with Leak Lock');button.click();
     const control=document.querySelector('#reply-body > quiet-web-controls')!,shadow=control.shadowRoot!;
-    expect([...shadow.querySelectorAll('button')].map(b=>b.textContent)).toEqual(['Undo hide','Add to filter']);
+    expect([...shadow.querySelectorAll('button')].map(b=>b.textContent)).toEqual(['Undo hide']);
     expect(shadow.querySelector('details')).toBeNull();
     document.querySelector('time')!.textContent='2h';engine.scan();
     expect(document.querySelector('#reply-body > quiet-web-controls')).toBe(control);

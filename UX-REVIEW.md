@@ -10,7 +10,7 @@
 | Demo controls | Off by default under Settings. Small eye-off icon on hover/focus; touch fallback and reduced-motion support. Off removes controls and manual hides. |
 | Manual Hide | Demo only; local to a reliable post boundary, reversible Undo hide. |
 | Automatically filtered | Filter name + Reveal; Always allow stays secondary. No redundant Add to filter. |
-| Manually hidden | Undo hide + optional Add to filter. No allowance menu. Existing filter + editable phrase; failed saves preserve the hide. |
+| Manually hidden | Locked + Undo hide only. Reddit uses a compact card; Reels retain the original viewport dimensions. No allowance or learning menu. |
 | Reddit comments | Hide only the comment body; keep replies readable and independently filterable. |
 | Reveal | Automatic matches return after 30 seconds. |
 | Always allow | Secondary disclosure for author/domain allowances. |

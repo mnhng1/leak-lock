@@ -62,20 +62,14 @@ describe('Dune spoiler context',()=>{
 describe('manual hide and example workflow',()=>{
   const shadow=()=>document.querySelector('quiet-web-controls')!.shadowRoot!;
   const click=(text:string)=>[...shadow().querySelectorAll('button')].find(b=>b.textContent===text)!.click();
-  it('hides an unmatched item immediately, teaches a filter, and automatically matches a future sibling',async()=>{
-    document.body.innerHTML='<article id="original"><h2>Rainbow noodles special</h2><p>A new offer</p></article>';
-    let p:Preferences={...structuredClone(DEFAULTS),demoControls:true};
-    const learn=vi.fn(async(id:string,phrase:string)=>{p=learnRule(p,id,phrase);engine!.update(p);});
-    engine=new FilterEngine(p,async()=>{},document,learn);
+  it('offers only Undo on a demo lock without changing filters',()=>{
+    document.body.innerHTML='<article><p>Unrecognized content</p></article>';
+    const prefs={...structuredClone(DEFAULTS),demoControls:true},learn=vi.fn();
+    engine=new FilterEngine(prefs,async()=>{},document,learn);
     document.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();
-    expect(engine.status.hidden).toBe(1);expect(shadow().textContent).toContain('Locked');
-    click('Add to filter');const input=shadow().querySelector('input')!;input.value='Rainbow noodles';
-    input.focus();engine.scan();expect(shadow().querySelector('input')!.value).toBe('Rainbow noodles');expect(shadow().activeElement?.getAttribute('aria-label')).toBe('Matching phrase');
-    shadow().querySelector('form')!.dispatchEvent(new Event('submit',{cancelable:true}));await Promise.resolve();await Promise.resolve();
-    expect(learn).toHaveBeenCalledWith('preset-gambling','Rainbow noodles');
-    document.body.insertAdjacentHTML('beforeend','<article id="future">Try Rainbow noodles now</article>');engine.scan();
-    expect(document.querySelector('#future quiet-web-controls')).not.toBeNull();
-    expect(document.querySelector('#future quiet-web-controls')!.shadowRoot!.textContent).toContain('Gambling promotions');
+    expect(shadow().querySelector('strong')!.textContent).toBe('Locked');
+    expect([...shadow().querySelectorAll('button')].map(b=>b.textContent)).toEqual(['Undo hide']);
+    expect(shadow().querySelector('form')).toBeNull();expect(learn).not.toHaveBeenCalled();
   });
   it('undoes manual hide and resets manual state when a site recycles a card',()=>{
     document.body.innerHTML='<article><p>Unrecognized content</p></article>';engine=new FilterEngine(({...structuredClone(DEFAULTS),demoControls:true}),async()=>{});
@@ -88,10 +82,15 @@ describe('manual hide and example workflow',()=>{
     const roots=instagram.discover(document);expect(roots).toHaveLength(2);expect(instagram.extract(roots[0],new URL('https://www.instagram.com/'),new Set(roots)).type).toBe('post');
     engine=new FilterEngine(({...structuredClone(DEFAULTS),demoControls:true}),async()=>{});expect(document.querySelectorAll('article > quiet-web-manual')).toHaveLength(2);expect(document.querySelector('main > quiet-web-manual')).toBeNull();
   });
-  it('preserves rule exceptions after learning and shows save failures without revealing the manual hide',async()=>{
-    const p=({...structuredClone(DEFAULTS),demoControls:true});p.rules[0].except=['film review'];const taught=learnRule(p,p.rules[0].id,'rainbow noodles');
-    document.body.innerHTML='<article>Film review: rainbow noodles</article>';engine=new FilterEngine(taught,async()=>{},document,async()=>{throw new Error('Storage unavailable');});
-    expect(document.querySelector('quiet-web-controls')).toBeNull();document.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();click('Add to filter');
-    shadow().querySelector('form')!.dispatchEvent(new Event('submit',{cancelable:true}));await Promise.resolve();await Promise.resolve();expect(shadow().textContent).toContain('Storage unavailable');expect(engine.status.hidden).toBe(1);click('Undo hide');expect(document.querySelector('quiet-web-controls')).toBeNull();
+  it('allows a demo hide of an exempt post without modifying the filter',()=>{
+    const p={...structuredClone(DEFAULTS),demoControls:true};p.rules[0].except=['film review'];
+    const taught=learnRule(p,p.rules[0].id,'rainbow noodles');
+    document.body.innerHTML='<article>Film review: rainbow noodles</article>';
+    engine=new FilterEngine(taught,async()=>{});
+    expect(document.querySelector('quiet-web-controls')).toBeNull();
+    document.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();
+    expect(engine.status.hidden).toBe(1);expect(shadow().querySelectorAll('button')).toHaveLength(1);
+    click('Undo hide');expect(document.querySelector('quiet-web-controls')).toBeNull();
+    expect(taught.rules[0].except).toEqual(['film review']);
   });
 });

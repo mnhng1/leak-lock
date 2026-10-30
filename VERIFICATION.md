@@ -42,3 +42,7 @@ Manual controls default off for new and existing settings. Three new unit regres
 ### Compact demo locks (0.3.11)
 
 Demo-only manual hides now collapse to a compact 88px Locked card with a soft blurred green background and a lock icon. Automatic matches keep their configured style and labels. Undo restores original inline layout. Strict TypeScript, 59 unit tests and the Chromium extension suite pass, including compact post/Reel sizing, form access, and restoring reel height. Live Instagram verification measured a demo reel shrinking from about 870px to 88px with the Locked label. README is rewritten for the pitch; implementation details and the options footer tagline are removed.
+
+### Site-specific demo sizing (0.3.12)
+
+Demo locks collapse only on Reddit. Instagram Reels retain their original dimensions and the lock graphic fills the full Reel. Manual lock controls now contain only Undo hide; Add to filter is removed. Tests cover full Reel dimensions and scroll position, compact Reddit comments, Undo restoration, and manual sizing taking precedence over an automatic collapse rule. Live verification is pending the user enabling demo controls after the Instagram refresh.

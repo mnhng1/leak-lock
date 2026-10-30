@@ -1,4 +1,4 @@
-import { controlCSS, learningForm, type Learn } from './manual';
+import { controlCSS, type Learn } from './manual';
 import type { ContentUnit, Decision, Rule } from './model';
 export interface Treatment { restore(moveFocus?:boolean): void; host: HTMLElement; refresh():void; }
 export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>void, allow:(kind:'author'|'domain')=>void, learning?:{rules:Rule[];learn:Learn;manual:boolean}):Treatment {
@@ -8,7 +8,8 @@ export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>v
   host.addEventListener('click',event=>event.stopPropagation());
   host.addEventListener('keydown',event=>event.stopPropagation());
   const demo=!!learning?.manual;
-  const collapse=demo || decision.rule?.action==='collapse';
+  const compact=demo && /(^|\.)reddit\.com$/.test(item.site);
+  const collapse=demo?compact:decision.rule?.action==='collapse';
   const saved: Array<()=>void>=[];
   const originalStyles=new Map<HTMLElement,string|null>();
   function prop(el:HTMLElement,key:string,value:string) {
@@ -32,7 +33,7 @@ export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>v
   if(getComputedStyle(root).position==='static') prop(root,'position','relative');
   if(collapse) {prop(root,'padding','0px');prop(root,'min-height','0px');prop(root,'height','auto');prop(root,'max-height','none');}
   else prop(root,'min-height','160px');
-  if(demo){prop(root,'display','block');prop(root,'flex-grow','0');prop(root,'flex-basis','auto');}
+  if(compact){prop(root,'display','block');prop(root,'flex-grow','0');prop(root,'flex-basis','auto');}
   for(const key of ['tabindex']) {
     const value=root.getAttribute(key);
     if(value!==null) {root.removeAttribute(key);saved.push(()=>{if(!root.hasAttribute(key))root.setAttribute(key,value);});}
@@ -45,7 +46,7 @@ export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>v
     details{font:12px/1.4 system-ui;align-self:center}summary{cursor:pointer;padding:8px;color:#345b4c}details[open]{width:100%}details[open]>.actions{padding-top:5px}summary:focus-visible{outline:3px solid #b76716;outline-offset:2px}
     button{font:600 12px/1.3 system-ui;min-height:34px;border:1px solid #789b8d;border-radius:7px;padding:7px 10px;color:#163f35;background:white;cursor:pointer}button:first-child{background:#58cc02;color:#173d00;border-color:#48ad00}button:focus-visible{outline:3px solid #b76716;outline-offset:2px}`;
   if(demo)style.textContent+=`
-    .surface{position:relative;isolation:isolate;min-height:88px;padding:14px 18px;overflow:hidden;background:#f1f8e9;border-radius:16px}
+    .surface{position:${compact?'relative':'absolute'};isolation:isolate;min-height:${compact?'88px':'0'};padding:14px 18px;overflow:hidden;background:#f1f8e9;border-radius:16px}
     .surface::before{content:"";position:absolute;inset:-20px;z-index:-1;background:radial-gradient(ellipse at 18% 45%,#c9dfb1 0,transparent 48%),radial-gradient(ellipse at 85% 80%,#dfebd5 0,transparent 50%);filter:blur(16px);opacity:.8;pointer-events:none}
     .panel{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:0;max-width:100%;width:100%}
     .lock-mark{width:28px;height:28px;flex:none;color:#527247}.panel>strong{margin:0;font-size:15px}.actions{gap:6px}
@@ -59,7 +60,6 @@ export function applyTreatment(item:ContentUnit, decision:Decision, reveal:()=>v
   const actions=document.createElement('div');actions.className='actions';
   function button(label:string,callback:()=>void,target:HTMLElement=actions) {const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=event=>{event.preventDefault();event.stopPropagation();callback();};target.append(b);}
   button(learning?.manual?'Undo hide':'Reveal for 30s',reveal);
-  if(learning?.manual)button('Add to filter',()=>{if(panel.querySelector('form'))return;const form=learningForm(item,learning.rules,learning.learn,()=>form.remove());panel.append(form);form.querySelector('select')?.focus();});
   const more=document.createElement('details');
   const summary=document.createElement('summary');summary.textContent='Always allow…';more.append(summary);
   const allowances=document.createElement('div');allowances.className='actions';more.append(allowances);

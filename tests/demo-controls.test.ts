@@ -2,6 +2,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { FilterEngine } from '../src/engine';
 import { DEFAULTS, presetRule } from '../src/model';
+import { applyTreatment } from '../src/treatment';
+import { type ContentUnit } from '../src/model';
 import { validatePreferences } from '../src/preferences';
 let engine:FilterEngine|undefined;
 afterEach(()=>{engine?.destroy();document.body.innerHTML='';});
@@ -36,13 +38,25 @@ describe('optional demo controls',()=>{
     document.body.innerHTML='<article id="auto"><p>Casino promotion</p></article><article id="demo" style="height:640px;min-height:500px;display:flex;padding:20px"><p>A quiet afternoon</p></article>';
     engine=new FilterEngine({...structuredClone(DEFAULTS),demoControls:true,rules:[presetRule('gambling')]},async()=>{});
     const root=document.querySelector<HTMLElement>('#demo')!,original=root.getAttribute('style');
-    root.querySelector('quiet-web-manual')!.shadowRoot!.querySelector('button')!.click();
-    const shadow=root.querySelector('quiet-web-controls')!.shadowRoot!;
+    const item:ContentUnit={root,id:'demo',site:'www.reddit.com',url:'https://www.reddit.com/r/demo/',type:'post',title:'',body:'',caption:'',hashtags:[],labels:[],evidence:[],limitations:[]};
+    const treatment=applyTreatment(item,{status:'clear'},()=>treatment.restore(),()=>{},{manual:true,rules:[],learn:async()=>{}});
+    const shadow=treatment.host.shadowRoot!;
     expect(shadow.querySelector('strong')!.textContent).toBe('Locked');
     expect(root.style.height).toBe('auto');expect(root.querySelector('p')!.style.display).toBe('none');
     expect(shadow.querySelector('.lock-mark')).not.toBeNull();
     expect(document.querySelector('#auto p')!.getAttribute('style')).toContain('blur(12px)');
     expect(document.querySelector('#auto quiet-web-controls')!.shadowRoot!.querySelector('strong')!.textContent).toBe('Hidden: Gambling promotions');
     shadow.querySelector('button')!.click();expect(root.getAttribute('style')).toBe(original);
+  });
+  it('preserves a Reels viewport even when the associated automatic rule uses collapse',()=>{
+    document.body.innerHTML='<div id="reel" style="height:720px;width:405px;display:flex"><div><video></video><p>Caption</p></div></div>';
+    const root=document.querySelector<HTMLElement>('#reel')!;
+    const item:ContentUnit={root,id:'reel',site:'www.instagram.com',url:'https://www.instagram.com/reels/demo/',type:'reel',title:'',body:'',caption:'',hashtags:[],labels:[],evidence:[],limitations:[]};
+    const treatment=applyTreatment(item,{status:'match',rule:presetRule('golf','collapse')},()=>{},()=>{},{manual:true,rules:[],learn:async()=>{}});
+    expect(root.style.height).toBe('720px');expect(root.style.width).toBe('405px');expect(root.style.display).toBe('flex');
+    expect(root.querySelector('div')!.style.display).not.toBe('none');
+    expect(treatment.host.style.position).toBe('absolute');
+    expect([...treatment.host.shadowRoot!.querySelectorAll('button')].map(b=>b.textContent)).toEqual(['Undo hide']);
+    treatment.restore();
   });
 });
